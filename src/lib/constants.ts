@@ -30,13 +30,13 @@ export const NAV_ITEMS = [
   { href: "/settings", label: "Settings", icon: "Settings" },
 ] as const;
 
-// Bottom nav on mobile shows a curated subset; the rest live in the drawer.
+// Bottom nav on mobile shows a curated subset; "More" opens a full drawer with every page.
 export const BOTTOM_NAV_ITEMS = [
   { href: "/overview", label: "Home", icon: "LayoutDashboard" },
   { href: "/checkin", label: "Check-In", icon: "CheckCircle2" },
   { href: "/finance", label: "Finance", icon: "Wallet" },
   { href: "/todo", label: "To-Do", icon: "ListChecks" },
-  { href: "/settings", label: "More", icon: "Menu" },
+  { href: "__more__", label: "More", icon: "Menu" },
 ] as const;
 
 export const EXERCISE_TYPES = ["gym", "badminton", "running", "walking", "other"] as const;
