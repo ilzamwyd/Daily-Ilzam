@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { UserTargets, DEFAULT_TARGETS } from "@/lib/types";
 import { Settings as SettingsIcon } from "lucide-react";
+import { WorkHourAlarm } from "@/components/settings/WorkHourAlarm";
 
 const FIELDS: { key: keyof UserTargets; label: string; type: string; step?: string }[] = [
   { key: "starting_weight", label: "Starting weight (kg)", type: "number", step: "0.1" },
@@ -87,6 +88,8 @@ export default function SettingsPage() {
           ))}
         </CardContent>
       </Card>
+
+      <WorkHourAlarm hardStopTime={targets.hard_stop_time} />
 
       <Button size="lg" onClick={handleSave} disabled={saving}>
         {saving ? "Saving…" : saved ? "Saved ✓" : "Save settings"}

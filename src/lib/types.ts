@@ -99,8 +99,60 @@ export interface ContentProgressItem {
   user_id?: string;
   title: string;
   stage: "idea" | "started" | "editing" | "published";
+  account: string | null;
+  result_notes: string | null;
+  next_action: string | null;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface EnglishGoal {
+  id?: string;
+  user_id?: string;
+  target_date: string; // YYYY-MM-DD
+  level_label: string;
+  achieved: boolean;
+}
+
+export interface EnglishVocab {
+  id?: string;
+  user_id?: string;
+  word: string;
+  note: string | null;
+  created_at?: string;
+}
+
+export interface MonthlyPriority {
+  id?: string;
+  user_id?: string;
+  month: string; // YYYY-MM-01
+  priority_text: string;
+  done: boolean;
+}
+
+export interface MonthlyReflection {
+  id?: string;
+  user_id?: string;
+  month: string;
+  entry_text: string | null;
+  ai_reflection: string | null;
+  updated_at?: string;
+}
+
+export interface BusinessChecklistItem {
+  id?: string;
+  user_id?: string;
+  item_text: string;
+  done: boolean;
+}
+
+export interface BusinessSale {
+  id?: string;
+  user_id?: string;
+  date: string;
+  revenue: number;
+  cost: number;
+  note: string | null;
 }
 
 export interface CareerReview {
@@ -113,6 +165,78 @@ export interface CareerReview {
   learning: number | null;
   impact: number | null;
   stress: number | null;
+  created_at?: string;
+}
+
+export type TransactionType = "income" | "expense";
+
+export interface Transaction {
+  id?: string;
+  user_id?: string;
+  date: string; // YYYY-MM-DD
+  time: string; // HH:mm
+  type: TransactionType;
+  amount: number;
+  source: string; // Cash, Mandiri, BRI, BNI, BCA, ...
+  code: string; // group: Foodies, Transportation, Accomodation, Shopping, Others, Income
+  category: string; // subcategory, or income category when type = income
+  note: string | null;
+  created_at?: string;
+}
+
+export interface MonthlyBudget {
+  id?: string;
+  user_id?: string;
+  month: string; // YYYY-MM-01
+  type: TransactionType;
+  code: string;
+  category: string;
+  budgeted_amount: number;
+}
+
+export interface Meeting {
+  id?: string;
+  user_id?: string;
+  title: string;
+  meeting_date: string; // YYYY-MM-DD
+  role_context: "Main Role" | "Expanded Role" | "Other" | null;
+  raw_notes: string | null;
+  summary: string | null;
+  created_at?: string;
+}
+
+export type ActionItemStatus = "todo" | "done";
+
+export interface ActionItem {
+  id?: string;
+  user_id?: string;
+  meeting_id?: string | null;
+  description: string;
+  assignee: string | null;
+  deadline: string | null; // YYYY-MM-DD
+  status: ActionItemStatus;
+  created_at?: string;
+}
+
+export interface FoodLibraryItem {
+  id?: string;
+  user_id?: string;
+  name: string;
+  calories: number;
+  serving_label: string;
+  source: "manual" | "ai_estimate";
+  created_at?: string;
+}
+
+export interface FoodLogEntry {
+  id?: string;
+  user_id?: string;
+  date: string;
+  food_name: string;
+  calories_per_serving: number;
+  servings: number;
+  total_calories: number;
+  food_library_id?: string | null;
   created_at?: string;
 }
 

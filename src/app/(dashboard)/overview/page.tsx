@@ -48,7 +48,7 @@ export default async function OverviewPage() {
   if (logs.length === 0) {
     return (
       <div className="mx-auto max-w-2xl">
-        <h1 className="font-display text-3xl font-bold tracking-tight">Comeback OS</h1>
+        <h1 className="font-display text-3xl font-bold tracking-tight">Daily Ilzam</h1>
         <p className="mt-2 text-muted-foreground">{MICROCOPY.greeting}</p>
         <div className="mt-8">
           <EmptyState message={MICROCOPY.emptyStory} />
@@ -67,7 +67,7 @@ export default async function OverviewPage() {
   return (
     <div className="flex flex-col gap-8">
       <div className="gradient-aurora rounded-3xl p-6 md:p-8">
-        <h1 className="font-display text-3xl font-bold tracking-tight">Comeback OS</h1>
+        <h1 className="font-display text-3xl font-bold tracking-tight">Daily Ilzam</h1>
         <p className="mt-2 text-muted-foreground">{MICROCOPY.greeting}</p>
 
         <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-5">

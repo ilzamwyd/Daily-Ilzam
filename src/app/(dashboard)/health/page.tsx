@@ -5,6 +5,7 @@ import { WeightChart } from "@/components/charts/WeightChart";
 import { StepsChart } from "@/components/charts/StepsChart";
 import { GymWeekChart } from "@/components/charts/GymWeekChart";
 import { EmptyState } from "@/components/dashboard/EmptyState";
+import { CalorieTracker } from "@/components/health/CalorieTracker";
 import { MICROCOPY } from "@/lib/constants";
 import { average, round1 } from "@/lib/utils";
 
@@ -68,6 +69,8 @@ export default async function HealthPage() {
           <StepsChart logs={logs} target={targets.step_target} />
         </CardContent>
       </Card>
+
+      <CalorieTracker />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>

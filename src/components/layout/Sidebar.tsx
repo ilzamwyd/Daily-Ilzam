@@ -10,7 +10,7 @@ export function Sidebar() {
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-card/50 px-4 py-6 md:flex">
       <div className="mb-8 px-2">
-        <h1 className="font-display text-xl font-bold tracking-tight">Comeback OS</h1>
+        <h1 className="font-display text-xl font-bold tracking-tight">Daily Ilzam</h1>
         <p className="mt-1 text-xs text-muted-foreground">Sustainable Ambition</p>
       </div>
       <nav className="flex flex-1 flex-col gap-1">

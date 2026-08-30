@@ -21,6 +21,11 @@ export const NAV_ITEMS = [
   { href: "/life", label: "Life", icon: "Users" },
   { href: "/growth", label: "Growth", icon: "Sprout" },
   { href: "/work", label: "Work", icon: "Briefcase" },
+  { href: "/business", label: "Business", icon: "Store" },
+  { href: "/finance", label: "Finance", icon: "Wallet" },
+  { href: "/mom", label: "MoM", icon: "Mic" },
+  { href: "/todo", label: "To-Do", icon: "ListChecks" },
+  { href: "/monthly-plan", label: "Monthly Plan", icon: "CalendarCheck" },
   { href: "/reflection", label: "Reflection", icon: "NotebookPen" },
   { href: "/settings", label: "Settings", icon: "Settings" },
 ] as const;
@@ -29,8 +34,8 @@ export const NAV_ITEMS = [
 export const BOTTOM_NAV_ITEMS = [
   { href: "/overview", label: "Home", icon: "LayoutDashboard" },
   { href: "/checkin", label: "Check-In", icon: "CheckCircle2" },
-  { href: "/health", label: "Health", icon: "HeartPulse" },
-  { href: "/mind", label: "Mind", icon: "Brain" },
+  { href: "/finance", label: "Finance", icon: "Wallet" },
+  { href: "/todo", label: "To-Do", icon: "ListChecks" },
   { href: "/settings", label: "More", icon: "Menu" },
 ] as const;
 

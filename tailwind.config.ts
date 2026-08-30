@@ -33,6 +33,7 @@ const config: Config = {
         mental: { DEFAULT: "#6366f1", light: "#e0e7ff" },
         warn: { DEFAULT: "#fb923c", light: "#ffedd5" },
         critical: { DEFAULT: "#b91c1c", light: "#fee2e2" },
+        finance: { DEFAULT: "#0891b2", light: "#cffafe" },
       },
       borderRadius: {
         xl: "1rem",
