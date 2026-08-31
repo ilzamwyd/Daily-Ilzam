@@ -13,7 +13,19 @@ export const MICROCOPY = {
   emptyChart: "A few more days of check-ins will help reveal your patterns.",
 };
 
-export const NAV_ITEMS = [
+export interface NavLeaf {
+  href: string;
+  label: string;
+  icon: string;
+}
+export interface NavGroup {
+  label: string;
+  icon: string;
+  children: NavLeaf[];
+}
+export type NavItem = NavLeaf | NavGroup;
+
+export const NAV_ITEMS: NavItem[] = [
   { href: "/overview", label: "Overview", icon: "LayoutDashboard" },
   { href: "/checkin", label: "Daily Check-In", icon: "CheckCircle2" },
   { href: "/health", label: "Health", icon: "HeartPulse" },
@@ -33,7 +45,7 @@ export const NAV_ITEMS = [
     ],
   },
   { href: "/todo", label: "To-Do", icon: "ListChecks" },
-] as const;
+];
 
 // Bottom nav on mobile shows a curated subset; "More" opens a full drawer with every page.
 export const BOTTOM_NAV_ITEMS = [
