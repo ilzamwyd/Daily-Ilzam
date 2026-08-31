@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { Plus, Check, Circle, Sparkles, Loader2 } from "lucide-react";
+import { useAiEnabled } from "@/lib/useAiEnabled";
 
 function monthStr(): string {
   const d = new Date();
@@ -16,6 +17,7 @@ function monthStr(): string {
 
 export default function MonthlyPlanPage() {
   const supabase = createClient();
+  const aiEnabled = useAiEnabled();
   const [userId, setUserId] = useState<string | null>(null);
   const [month] = useState(monthStr());
   const [priorities, setPriorities] = useState<MonthlyPriority[]>([]);
@@ -162,10 +164,12 @@ export default function MonthlyPlanPage() {
           onBlur={saveEntry}
         />
         <div className="mt-3 flex items-center gap-2">
-          <Button type="button" className="gap-2" onClick={handleReflect} disabled={reflecting || entryText.trim().length < 10}>
-            {reflecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-            {reflecting ? "Reading…" : "Get a Reflection"}
-          </Button>
+          {aiEnabled && (
+            <Button type="button" className="gap-2" onClick={handleReflect} disabled={reflecting || entryText.trim().length < 10}>
+              {reflecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              {reflecting ? "Reading…" : "Get a Reflection"}
+            </Button>
+          )}
           {saving && <span className="text-xs text-muted-foreground">Saving…</span>}
         </div>
         {reflectError && <p className="mt-2 text-sm text-critical">{reflectError}</p>}
@@ -174,7 +178,14 @@ export default function MonthlyPlanPage() {
             <p className="text-sm leading-relaxed">{reflection}</p>
           </div>
         )}
-        {!reflection && !reflectError && <EmptyState message="Write a bit about your month, then ask for a reflection." />}
+        {!reflection && !reflectError && aiEnabled && (
+          <EmptyState message="Write a bit about your month, then ask for a reflection." />
+        )}
+        {!reflection && !aiEnabled && (
+          <p className="mt-3 text-xs text-muted-foreground">
+            Whatever you write here is saved privately as your own monthly journal.
+          </p>
+        )}
       </Card>
     </div>
   );
