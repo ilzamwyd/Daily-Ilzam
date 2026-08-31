@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { WeeklyReview, DailyLog } from "@/lib/types";
 import { formatDateISO, startOfWeek, daysAgo } from "@/lib/utils";
 import { generateInsights } from "@/lib/insights";
-import { NotebookPen, Sparkles } from "lucide-react";
+import { NotebookPen, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
 
 const QUESTIONS: { key: keyof WeeklyReview; label: string }[] = [
   { key: "went_well", label: "What went well?" },
@@ -19,17 +19,29 @@ const QUESTIONS: { key: keyof WeeklyReview; label: string }[] = [
   { key: "one_priority", label: "What is ONE priority next week?" },
 ];
 
+function addDays(d: Date, n: number): Date {
+  const copy = new Date(d);
+  copy.setDate(copy.getDate() + n);
+  return copy;
+}
+
 export default function ReflectionPage() {
   const supabase = createClient();
+  const [weekOffset, setWeekOffset] = useState(0); // 0 = this week, -1 = last week, etc.
   const [review, setReview] = useState<Partial<WeeklyReview>>({});
   const [logs, setLogs] = useState<DailyLog[]>([]);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
-  const weekStart = formatDateISO(startOfWeek());
+
+  const viewedMonday = addDays(startOfWeek(new Date()), weekOffset * 7);
+  const weekStart = formatDateISO(viewedMonday);
+  const weekEnd = formatDateISO(addDays(viewedMonday, 6));
+  const isCurrentWeek = weekOffset === 0;
 
   useEffect(() => {
     (async () => {
+      setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       const since = formatDateISO(daysAgo(14));
@@ -37,12 +49,13 @@ export default function ReflectionPage() {
         supabase.from("weekly_reviews").select("*").eq("user_id", user.id).eq("week_start", weekStart).maybeSingle(),
         supabase.from("daily_logs").select("*").eq("user_id", user.id).gte("date", since).order("date", { ascending: true }),
       ]);
-      if (existing) setReview(existing as WeeklyReview);
+      setReview(existing ? (existing as WeeklyReview) : {});
       setLogs((logData as DailyLog[]) ?? []);
+      setSaved(false);
       setLoading(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [weekStart]);
 
   async function handleSave() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -62,17 +75,35 @@ export default function ReflectionPage() {
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6 pb-10">
-      <div>
-        <h1 className="font-display text-2xl font-bold tracking-tight">Weekly Review</h1>
-        <p className="text-sm text-muted-foreground">A short Sunday reflection — not a report card.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="font-display text-2xl font-bold tracking-tight">Weekly Review</h1>
+          <p className="text-sm text-muted-foreground">A short Sunday reflection — not a report card.</p>
+        </div>
+        <div className="flex items-center gap-1">
+          <button onClick={() => setWeekOffset((o) => o - 1)} className="rounded-xl border border-border p-2 hover:bg-muted">
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => setWeekOffset((o) => Math.min(0, o + 1))}
+            disabled={isCurrentWeek}
+            className="rounded-xl border border-border p-2 hover:bg-muted disabled:opacity-30"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
       </div>
+
+      <p className="-mt-4 text-xs text-muted-foreground">
+        {isCurrentWeek ? "This week" : "Past week"} · {weekStart} to {weekEnd}
+      </p>
 
       <Card>
         <CardHeader className="flex-row items-center gap-3 space-y-0">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-muted text-foreground">
             <NotebookPen className="h-5 w-5" />
           </div>
-          <CardTitle>This week's questions</CardTitle>
+          <CardTitle>{isCurrentWeek ? "This week's questions" : "That week's questions"}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
           {QUESTIONS.map((q) => (
@@ -94,20 +125,22 @@ export default function ReflectionPage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="flex-row items-center gap-3 space-y-0">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-            <Sparkles className="h-5 w-5" />
-          </div>
-          <CardTitle>This Week — auto-generated summary</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <SummaryBlock title="Wins" items={wins.map((w) => w.text)} colorClass="text-health bg-health-light" />
-          <SummaryBlock title="Watch" items={watch.map((w) => w.text)} colorClass="text-warn bg-warn-light" />
-          <SummaryBlock title="Reset" items={reset.map((w) => w.text)} colorClass="text-critical bg-critical-light" />
-          <SummaryBlock title="One Focus Next Week" items={review.one_priority ? [review.one_priority] : []} colorClass="text-career bg-career-light" />
-        </CardContent>
-      </Card>
+      {isCurrentWeek && (
+        <Card>
+          <CardHeader className="flex-row items-center gap-3 space-y-0">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <CardTitle>This Week — auto-generated summary</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-2">
+            <SummaryBlock title="Wins" items={wins.map((w) => w.text)} colorClass="text-health bg-health-light" />
+            <SummaryBlock title="Watch" items={watch.map((w) => w.text)} colorClass="text-warn bg-warn-light" />
+            <SummaryBlock title="Reset" items={reset.map((w) => w.text)} colorClass="text-critical bg-critical-light" />
+            <SummaryBlock title="One Focus Next Week" items={review.one_priority ? [review.one_priority] : []} colorClass="text-career bg-career-light" />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

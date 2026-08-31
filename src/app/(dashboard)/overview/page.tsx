@@ -29,7 +29,14 @@ export default async function OverviewPage() {
   const last7 = logs.slice(-7);
   const last14 = logs.slice(-14, -7);
 
-  const balance = computeWeeklyBalanceScore(last7, targets);
+  const since7 = last7[0]?.date ?? today;
+  const { count: englishSessionCount } = await supabase
+    .from("english_sessions")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id)
+    .gte("date", since7);
+
+  const balance = computeWeeklyBalanceScore(last7, targets, englishSessionCount ?? undefined);
   const insights = generateInsights(logs);
 
   const avgSteps = average(last7.map((l) => l.steps));

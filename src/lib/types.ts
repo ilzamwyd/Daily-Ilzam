@@ -78,6 +78,8 @@ export interface UserTargets {
   hard_stop_time: string;
   recovery_daily_min_minutes: number;
   recovery_daily_max_minutes: number;
+  calorie_min: number | null;
+  calorie_max: number | null;
 }
 
 export interface WeeklyReview {
@@ -106,6 +108,16 @@ export interface ContentProgressItem {
   updated_at?: string;
 }
 
+export interface EnglishSession {
+  id?: string;
+  user_id?: string;
+  date: string;
+  aspect: "Listening" | "Reading" | "Speaking" | "Writing" | "Grammar" | "Vocabulary" | "Evaluation";
+  duration_minutes: number | null;
+  notes: string | null;
+  created_at?: string;
+}
+
 export interface EnglishGoal {
   id?: string;
   user_id?: string;
@@ -119,6 +131,7 @@ export interface EnglishVocab {
   user_id?: string;
   word: string;
   note: string | null;
+  date?: string;
   created_at?: string;
 }
 
@@ -214,6 +227,7 @@ export interface ActionItem {
   description: string;
   assignee: string | null;
   deadline: string | null; // YYYY-MM-DD
+  category?: string | null;
   status: ActionItemStatus;
   created_at?: string;
 }
@@ -237,7 +251,25 @@ export interface FoodLogEntry {
   servings: number;
   total_calories: number;
   food_library_id?: string | null;
+  meal_slot?: "breakfast" | "lunch" | "snack" | "dinner" | null;
   created_at?: string;
+}
+
+export interface WorkoutLogEntry {
+  id?: string;
+  user_id?: string;
+  date: string;
+  exercise_name: string;
+  duration_minutes: number | null;
+  created_at?: string;
+}
+
+export interface WaterLogEntry {
+  id?: string;
+  user_id?: string;
+  date: string;
+  amount_ml: number;
+  logged_at?: string;
 }
 
 export const DEFAULT_TARGETS: UserTargets = {
@@ -254,6 +286,8 @@ export const DEFAULT_TARGETS: UserTargets = {
   hard_stop_time: "21:00",
   recovery_daily_min_minutes: 30,
   recovery_daily_max_minutes: 60,
+  calorie_min: null,
+  calorie_max: null,
 };
 
 export function emptyDailyLog(date: string): DailyLog {

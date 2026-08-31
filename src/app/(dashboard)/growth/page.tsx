@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Segmented } from "@/components/ui/segmented";
-import { ContentProgressItem, DailyLog, EnglishGoal, EnglishVocab } from "@/lib/types";
+import { ContentProgressItem, EnglishGoal, EnglishVocab, EnglishSession } from "@/lib/types";
+import { ENGLISH_ASPECTS, ASPECT_GUIDANCE, EnglishAspect } from "@/lib/english";
 import { Plus, Sprout, Languages, Check, Circle } from "lucide-react";
 import { formatDateISO, daysAgo } from "@/lib/utils";
 import { EnglishSessionsChart } from "@/components/charts/EnglishSessionsChart";
@@ -16,13 +17,11 @@ const ACCOUNTS = ["ilzamwyd", "zzamallll", "Other"] as const;
 export default function GrowthPage() {
   const supabase = createClient();
   const [userId, setUserId] = useState<string | null>(null);
-  const [logs, setLogs] = useState<DailyLog[]>([]);
   const [items, setItems] = useState<ContentProgressItem[]>([]);
   const [goals, setGoals] = useState<EnglishGoal[]>([]);
   const [vocab, setVocab] = useState<EnglishVocab[]>([]);
+  const [sessions, setSessions] = useState<EnglishSession[]>([]);
   const [newTitle, setNewTitle] = useState("");
-  const [newWord, setNewWord] = useState("");
-  const [newWordNote, setNewWordNote] = useState("");
   const [loading, setLoading] = useState(true);
   const [englishTarget, setEnglishTarget] = useState(3);
   const [contentTarget, setContentTarget] = useState(1);
@@ -36,19 +35,19 @@ export default function GrowthPage() {
     setUserId(user.id);
 
     const since = formatDateISO(daysAgo(56));
-    const [{ data: logData }, { data: contentData }, { data: targetData }, { data: goalData }, { data: vocabData }] =
+    const [{ data: contentData }, { data: targetData }, { data: goalData }, { data: vocabData }, { data: sessionData }] =
       await Promise.all([
-        supabase.from("daily_logs").select("*").eq("user_id", user.id).gte("date", since).order("date", { ascending: true }),
         supabase.from("content_progress").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
         supabase.from("user_targets").select("english_weekly_target, content_weekly_target").eq("user_id", user.id).maybeSingle(),
         supabase.from("english_goals").select("*").eq("user_id", user.id).order("target_date", { ascending: true }),
-        supabase.from("english_vocab").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(15),
+        supabase.from("english_vocab").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(20),
+        supabase.from("english_sessions").select("*").eq("user_id", user.id).gte("date", since).order("date", { ascending: false }),
       ]);
 
-    setLogs((logData as DailyLog[]) ?? []);
     setItems((contentData as ContentProgressItem[]) ?? []);
     setGoals((goalData as EnglishGoal[]) ?? []);
     setVocab((vocabData as EnglishVocab[]) ?? []);
+    setSessions((sessionData as EnglishSession[]) ?? []);
     if (targetData) {
       setEnglishTarget(targetData.english_weekly_target ?? 3);
       setContentTarget(targetData.content_weekly_target ?? 1);
@@ -61,31 +60,24 @@ export default function GrowthPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const last7 = logs.slice(-7);
-  const englishSessions = last7.filter((l) => l.english_practice).length;
-  const published = last7.filter((l) => l.content_published).length;
-
   const today = formatDateISO(new Date());
+  const weekAgo = formatDateISO(daysAgo(6));
+  const sessionsThisWeek = sessions.filter((s) => s.date >= weekAgo).length;
+
   const nextGoal = goals.find((g) => !g.achieved && g.target_date >= today) ?? goals.find((g) => !g.achieved);
   const daysToNextGoal = nextGoal
     ? Math.ceil((new Date(nextGoal.target_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : null;
 
+  const aspectStats = ENGLISH_ASPECTS.map((aspect) => {
+    const aspectSessions = sessions.filter((s) => s.aspect === aspect);
+    const last = aspectSessions[0]; // sessions already sorted date desc
+    return { aspect, count: aspectSessions.length, lastDate: last?.date ?? null };
+  });
+
   async function toggleGoal(goal: EnglishGoal) {
     setGoals((prev) => prev.map((g) => (g.id === goal.id ? { ...g, achieved: !g.achieved } : g)));
     await supabase.from("english_goals").update({ achieved: !goal.achieved }).eq("id", goal.id);
-  }
-
-  async function addVocab() {
-    if (!userId || !newWord.trim()) return;
-    const { data } = await supabase
-      .from("english_vocab")
-      .insert({ user_id: userId, word: newWord.trim(), note: newWordNote.trim() || null })
-      .select()
-      .single();
-    if (data) setVocab((prev) => [data as EnglishVocab, ...prev]);
-    setNewWord("");
-    setNewWordNote("");
   }
 
   async function addItem() {
@@ -122,17 +114,17 @@ export default function GrowthPage() {
           </div>
           <div>
             <CardTitle>English</CardTitle>
-            <CardDescription>10–20 minute sessions, {englishTarget}/week</CardDescription>
+            <CardDescription>Log sessions from your Daily Check-In — this is a recap.</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="flex flex-col gap-6">
           <p className="font-display text-3xl font-bold text-growth">
-            {englishSessions} / {englishTarget} <span className="text-base font-medium text-muted-foreground">sessions this week</span>
+            {sessionsThisWeek} / {englishTarget} <span className="text-base font-medium text-muted-foreground">sessions this week</span>
           </p>
 
           <div>
             <p className="mb-2 text-xs font-medium text-muted-foreground">Weekly consistency (last 8 weeks)</p>
-            <EnglishSessionsChart logs={logs} target={englishTarget} />
+            <EnglishSessionsChart sessions={sessions} target={englishTarget} />
           </div>
 
           {nextGoal && (
@@ -164,22 +156,47 @@ export default function GrowthPage() {
           )}
 
           <div>
-            <p className="mb-2 text-xs font-medium text-muted-foreground">New vocabulary (5–7/day is the goal)</p>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Input placeholder="Word" className="sm:w-40" value={newWord} onChange={(e) => setNewWord(e.target.value)} />
-              <Input
-                placeholder="Meaning / note (optional)"
-                className="sm:flex-1"
-                value={newWordNote}
-                onChange={(e) => setNewWordNote(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && addVocab()}
-              />
-              <Button onClick={addVocab} size="icon" aria-label="Add word">
-                <Plus className="h-4 w-4" />
-              </Button>
+            <p className="mb-3 text-xs font-medium text-muted-foreground">Progress by aspect (last 8 weeks)</p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {aspectStats.map(({ aspect, count, lastDate }) => (
+                <div key={aspect} className="rounded-2xl bg-muted p-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold">{aspect}</p>
+                    <span className="text-xs text-muted-foreground">{count} session{count === 1 ? "" : "s"}</span>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">{ASPECT_GUIDANCE[aspect]}</p>
+                  {lastDate && <p className="mt-1 text-xs text-growth">Last practiced: {lastDate}</p>}
+                </div>
+              ))}
             </div>
-            {vocab.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-2">
+          </div>
+
+          {sessions.length > 0 && (
+            <div>
+              <p className="mb-2 text-xs font-medium text-muted-foreground">Recent sessions</p>
+              <div className="flex flex-col divide-y divide-border">
+                {sessions.slice(0, 10).map((s) => (
+                  <div key={s.id} className="py-2 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">{s.aspect}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {s.date}
+                        {s.duration_minutes ? ` · ${s.duration_minutes} min` : ""}
+                      </span>
+                    </div>
+                    {s.notes && <p className="mt-0.5 text-xs text-muted-foreground">{s.notes}</p>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div>
+            <p className="mb-2 text-xs font-medium text-muted-foreground">Vocabulary recap (add new words from your Daily Check-In)</p>
+            {vocab.length === 0 ? (
+              <p className="text-xs text-muted-foreground">No words logged yet.</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
                 {vocab.map((v) => (
                   <span key={v.id} title={v.note ?? ""} className="rounded-full bg-muted px-3 py-1 text-xs font-medium">
                     {v.word}
@@ -198,7 +215,7 @@ export default function GrowthPage() {
           </div>
           <div>
             <CardTitle>Content Creation</CardTitle>
-            <CardDescription>Target: {contentTarget} published/week · {published} published this week</CardDescription>
+            <CardDescription>Target: {contentTarget} published/week</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">

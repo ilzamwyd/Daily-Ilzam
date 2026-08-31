@@ -3,14 +3,14 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import { DailyLog } from "@/lib/types";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { MICROCOPY } from "@/lib/constants";
-import { startOfWeek } from "@/lib/utils";
+import { startOfWeek, formatDateISO } from "@/lib/utils";
 
 export function GymWeekChart({ logs }: { logs: DailyLog[] }) {
   if (logs.length < 3) return <EmptyState message={MICROCOPY.emptyChart} />;
 
   const weekMap = new Map<string, number>();
   logs.forEach((l) => {
-    const wk = startOfWeek(new Date(l.date)).toISOString().slice(0, 10);
+    const wk = formatDateISO(startOfWeek(new Date(l.date)));
     if (l.gym) weekMap.set(wk, (weekMap.get(wk) ?? 0) + 1);
     else if (!weekMap.has(wk)) weekMap.set(wk, 0);
   });

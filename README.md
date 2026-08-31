@@ -42,6 +42,13 @@ Recharts, and Supabase.
    log tables behind the new Calories tracker on the Health page. The "Estimate with
    AI" button there reuses the same `ANTHROPIC_API_KEY` you already set up for MoM —
    no new key needed.
+2i. Run `supabase/migration_007_todo_category.sql` — adds the `category` column to
+   To-Do items.
+2j. Run `supabase/migration_008_health_expansion.sql` — meal-slot calories, calorie
+   targets, exercise log, and water log.
+2k. Run `supabase/migration_009_english_sessions.sql` — aspect-based English session
+   tracking (Listening/Reading/Speaking/Writing/Grammar/Vocabulary/Evaluation), and
+   adds a `date` column to `english_vocab`.
 3. In **Authentication → Providers**, Email is enabled by default. Optionally enable Google OAuth.
 4. In **Authentication → URL Configuration**, add your local and deployed URLs
    (e.g. `http://localhost:3000/auth/callback` and `https://your-app.vercel.app/auth/callback`)

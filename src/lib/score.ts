@@ -9,7 +9,7 @@ import { average } from "./utils";
  * Missing data is excluded rather than penalized, so a light-logging week
  * doesn't get punished harder than a fully-logged mediocre week.
  */
-export function computeWeeklyBalanceScore(logs: DailyLog[], targets: UserTargets) {
+export function computeWeeklyBalanceScore(logs: DailyLog[], targets: UserTargets, englishSessionCount?: number) {
   if (logs.length === 0) return null;
 
   const parts: { key: string; score: number | null }[] = [];
@@ -53,7 +53,7 @@ export function computeWeeklyBalanceScore(logs: DailyLog[], targets: UserTargets
   });
 
   // Personal growth: english + content combined
-  const englishDays = logs.filter((l) => l.english_practice).length;
+  const englishDays = englishSessionCount ?? logs.filter((l) => l.english_practice).length;
   const contentDays = logs.filter((l) => l.content_worked).length;
   const growthScore =
     Math.min(100, (englishDays / Math.max(1, targets.english_weekly_target)) * 60) +

@@ -12,6 +12,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { EXERCISE_TYPES, SOCIAL_TYPES, RECOVERY_TYPES } from "@/lib/constants";
 import { CheckCircle2, Calendar } from "lucide-react";
+import { MealSlotLogger } from "@/components/health/MealSlotLogger";
+import { ExerciseLogger } from "@/components/health/ExerciseLogger";
+import { WaterLogger } from "@/components/health/WaterLogger";
+import { EnglishSessionLogger } from "@/components/growth/EnglishSessionLogger";
+import { VocabLogger } from "@/components/growth/VocabLogger";
 
 export default function CheckInPage() {
   const supabase = createClient();
@@ -101,6 +106,9 @@ export default function CheckInPage() {
             <Input type="number" value={log.steps ?? ""} onChange={(e) => update("steps", e.target.value ? Number(e.target.value) : null)} placeholder="e.g. 7500" />
           </div>
         </div>
+        <div className="mt-4">
+          <WaterLogger date={date} />
+        </div>
       </SectionCard>
 
       <SectionCard title="Fitness" icon="Dumbbell" colorClass="bg-fitness-light text-fitness">
@@ -114,6 +122,7 @@ export default function CheckInPage() {
           <label className="mb-1.5 block text-sm font-medium">Duration (minutes, optional)</label>
           <Input type="number" value={log.exercise_duration ?? ""} onChange={(e) => update("exercise_duration", e.target.value ? Number(e.target.value) : null)} />
         </div>
+        <ExerciseLogger date={date} />
       </SectionCard>
 
       <SectionCard title="Nutrition" icon="Apple" colorClass="bg-health-light text-health">
@@ -129,6 +138,13 @@ export default function CheckInPage() {
             <Textarea rows={2} value={log.stress_eating_trigger ?? ""} onChange={(e) => update("stress_eating_trigger", e.target.value)} />
           </div>
         )}
+        <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <MealSlotLogger date={date} slot="breakfast" label="Breakfast" />
+          <MealSlotLogger date={date} slot="lunch" label="Lunch" />
+          <MealSlotLogger date={date} slot="snack" label="Snack" />
+          <MealSlotLogger date={date} slot="dinner" label="Dinner" />
+        </div>
+        <p className="text-xs text-muted-foreground">Full calorie recap, targets, and trends live on the Health page.</p>
       </SectionCard>
 
       <SectionCard title="Spiritual" description="For reflection only — never scored." icon="Moon" colorClass="bg-spiritual-light text-spiritual">
@@ -167,13 +183,13 @@ export default function CheckInPage() {
       </SectionCard>
 
       <SectionCard title="Personal Growth" icon="Sprout" colorClass="bg-growth-light text-growth">
-        <ToggleRow label="English practice?" checked={log.english_practice} onChange={(v) => update("english_practice", v)} activeClassName="bg-growth" />
-        {log.english_practice && (
-          <div>
-            <label className="mb-1.5 block text-sm font-medium">Duration (minutes, optional)</label>
-            <Input type="number" value={log.english_duration ?? ""} onChange={(e) => update("english_duration", e.target.value ? Number(e.target.value) : null)} />
-          </div>
-        )}
+        <div>
+          <label className="mb-1.5 block text-sm font-medium">English practice</label>
+          <EnglishSessionLogger date={date} />
+        </div>
+        <div className="border-t border-border pt-4">
+          <VocabLogger date={date} />
+        </div>
         <ToggleRow label="Content worked on?" checked={log.content_worked} onChange={(v) => update("content_worked", v)} activeClassName="bg-growth" />
         <ToggleRow label="Content published?" checked={log.content_published} onChange={(v) => update("content_published", v)} activeClassName="bg-growth" />
       </SectionCard>

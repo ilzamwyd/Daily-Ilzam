@@ -11,11 +11,12 @@ import { Segmented } from "@/components/ui/segmented";
 import { VoiceDictationButton } from "@/components/mom/VoiceDictationButton";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { Sparkles, Save, Trash2, Plus, Loader2 } from "lucide-react";
+import { formatDateISO } from "@/lib/utils";
 
-type DraftAction = { description: string; assignee: string; deadline: string };
+type DraftAction = { description: string; assignee: string; deadline: string; category: string };
 
 const ROLE_CONTEXTS = ["Main Role", "Expanded Role", "Other"] as const;
-const emptyDraft = (): DraftAction => ({ description: "", assignee: "", deadline: "" });
+const emptyDraft = (): DraftAction => ({ description: "", assignee: "", deadline: "", category: "" });
 
 export default function MomPage() {
   const supabase = createClient();
@@ -35,6 +36,8 @@ export default function MomPage() {
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [addingToMeeting, setAddingToMeeting] = useState<string | null>(null);
   const [newActionDraft, setNewActionDraft] = useState<DraftAction>(emptyDraft());
+  const [categories, setCategories] = useState<string[]>([]);
+  const [assignees, setAssignees] = useState<string[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -44,6 +47,9 @@ export default function MomPage() {
       if (!user) return;
       setUserId(user.id);
       await loadHistory(user.id);
+      const { data: tags } = await supabase.from("action_items").select("category, assignee").eq("user_id", user.id);
+      setCategories(Array.from(new Set((tags ?? []).map((t) => t.category).filter((c): c is string => !!c))).sort());
+      setAssignees(Array.from(new Set((tags ?? []).map((t) => t.assignee).filter((a): a is string => !!a))).sort());
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -55,6 +61,7 @@ export default function MomPage() {
       .select("*")
       .eq("user_id", uid)
       .order("meeting_date", { ascending: false })
+      .order("created_at", { ascending: false })
       .limit(20);
     const meetingIds = (meetings ?? []).map((m) => m.id);
     let items: ActionItem[] = [];
@@ -150,7 +157,7 @@ export default function MomPage() {
       .insert({
         user_id: userId,
         title: title.trim(),
-        meeting_date: new Date().toISOString().slice(0, 10),
+        meeting_date: formatDateISO(new Date()),
         role_context: roleContext,
         raw_notes: rawNotes || null,
         summary: summary || null,
@@ -167,6 +174,7 @@ export default function MomPage() {
           description: a.description.trim(),
           assignee: a.assignee.trim() || null,
           deadline: a.deadline || null,
+          category: a.category.trim() || null,
           status: "todo",
         }));
       if (rows.length > 0) await supabase.from("action_items").insert(rows);
@@ -189,6 +197,7 @@ export default function MomPage() {
         description: newActionDraft.description.trim(),
         assignee: newActionDraft.assignee.trim() || null,
         deadline: newActionDraft.deadline || null,
+        category: newActionDraft.category.trim() || null,
         status: "todo",
       })
       .select()
@@ -204,6 +213,16 @@ export default function MomPage() {
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
+      <datalist id="mom-category-options">
+        {categories.map((c) => (
+          <option key={c} value={c} />
+        ))}
+      </datalist>
+      <datalist id="mom-assignee-options">
+        {assignees.map((a) => (
+          <option key={a} value={a} />
+        ))}
+      </datalist>
       <div>
         <h1 className="font-display text-2xl font-bold tracking-tight">MoM — Minutes of Meeting</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -277,6 +296,14 @@ export default function MomPage() {
                     onChange={(e) => updateAction(i, { description: e.target.value })}
                   />
                   <Input
+                    list="mom-category-options"
+                    className="sm:w-40"
+                    placeholder="Category"
+                    value={a.category}
+                    onChange={(e) => updateAction(i, { category: e.target.value })}
+                  />
+                  <Input
+                    list="mom-assignee-options"
                     className="sm:w-40"
                     placeholder="PIC / assignee"
                     value={a.assignee}
@@ -349,6 +376,7 @@ export default function MomPage() {
                     {m.action_items.map((a) => (
                       <li key={a.id} className="flex items-center gap-2">
                         <span className={a.status === "done" ? "text-muted-foreground line-through" : ""}>{a.description}</span>
+                        {a.category && <span className="rounded-full bg-career-light px-2 py-0.5 text-[11px] font-medium text-career">{a.category}</span>}
                         {a.assignee && <span className="text-xs text-career">· {a.assignee}</span>}
                         {a.deadline && <span className="text-xs text-muted-foreground">· DL {a.deadline}</span>}
                       </li>
@@ -366,7 +394,15 @@ export default function MomPage() {
                       onChange={(e) => setNewActionDraft((prev) => ({ ...prev, description: e.target.value }))}
                     />
                     <Input
-                      className="sm:w-36"
+                      list="mom-category-options"
+                      className="sm:w-32"
+                      placeholder="Category"
+                      value={newActionDraft.category}
+                      onChange={(e) => setNewActionDraft((prev) => ({ ...prev, category: e.target.value }))}
+                    />
+                    <Input
+                      list="mom-assignee-options"
+                      className="sm:w-32"
                       placeholder="PIC"
                       value={newActionDraft.assignee}
                       onChange={(e) => setNewActionDraft((prev) => ({ ...prev, assignee: e.target.value }))}

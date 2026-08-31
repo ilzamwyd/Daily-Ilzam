@@ -22,6 +22,8 @@ const FIELDS: { key: keyof UserTargets; label: string; type: string; step?: stri
   { key: "hard_stop_time", label: "Hard stop work time", type: "time" },
   { key: "recovery_daily_min_minutes", label: "Recovery — min minutes/day", type: "number" },
   { key: "recovery_daily_max_minutes", label: "Recovery — max minutes/day", type: "number" },
+  { key: "calorie_min", label: "Calorie reference — min/day (optional)", type: "number" },
+  { key: "calorie_max", label: "Calorie reference — max/day (optional)", type: "number" },
 ];
 
 export default function SettingsPage() {

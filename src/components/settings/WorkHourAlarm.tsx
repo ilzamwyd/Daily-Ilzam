@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { urlBase64ToUint8Array } from "@/lib/push";
+import { formatDateISO } from "@/lib/utils";
 import { AlarmClock, BellRing } from "lucide-react";
 
 const INAPP_KEY = "daily-ilzam-inapp-alarm-enabled";
@@ -37,7 +38,7 @@ export function WorkHourAlarm({ hardStopTime }: { hardStopTime: string }) {
     const interval = setInterval(() => {
       const now = new Date();
       const hhmm = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-      const today = now.toISOString().slice(0, 10);
+      const today = formatDateISO(now);
       if (hhmm === hardStopTime.slice(0, 5) && localStorage.getItem(LAST_FIRED_KEY) !== today) {
         localStorage.setItem(LAST_FIRED_KEY, today);
         if (Notification.permission === "granted") {
