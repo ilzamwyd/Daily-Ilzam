@@ -6,7 +6,13 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatDateISO(d: Date) {
-  return d.toISOString().slice(0, 10);
+  // Use local calendar date parts, not toISOString() (which converts to UTC
+  // and can roll back to the previous day for timezones ahead of UTC, e.g.
+  // WIB/UTC+7 between local midnight and 7am).
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 export function average(nums: (number | null | undefined)[]): number | null {

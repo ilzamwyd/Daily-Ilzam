@@ -60,7 +60,7 @@ export function BottomNav() {
               </button>
             </div>
             <div className="grid grid-cols-3 gap-2">
-              {NAV_ITEMS.map((item) => {
+              {NAV_ITEMS.flatMap((item) => ("children" in item ? item.children : [item])).map((item) => {
                 const Icon = Icons[item.icon] as React.ElementType;
                 const active = pathname === item.href;
                 return (

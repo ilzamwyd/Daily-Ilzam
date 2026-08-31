@@ -18,23 +18,28 @@ export const NAV_ITEMS = [
   { href: "/checkin", label: "Daily Check-In", icon: "CheckCircle2" },
   { href: "/health", label: "Health", icon: "HeartPulse" },
   { href: "/mind", label: "Mind", icon: "Brain" },
-  { href: "/life", label: "Life", icon: "Users" },
-  { href: "/growth", label: "Growth", icon: "Sprout" },
-  { href: "/work", label: "Work", icon: "Briefcase" },
-  { href: "/business", label: "Business", icon: "Store" },
-  { href: "/finance", label: "Finance", icon: "Wallet" },
-  { href: "/mom", label: "MoM", icon: "Mic" },
+  { href: "/social", label: "Social", icon: "Users" },
+  {
+    label: "Career",
+    icon: "Briefcase",
+    children: [
+      { href: "/career", label: "Overview", icon: "LayoutDashboard" },
+      { href: "/career/work", label: "Work", icon: "Briefcase" },
+      { href: "/career/english", label: "English", icon: "Languages" },
+      { href: "/career/content", label: "Content", icon: "Sprout" },
+      { href: "/career/business", label: "Business", icon: "Store" },
+      { href: "/career/finance", label: "Finance", icon: "Wallet" },
+      { href: "/career/monthly-plan", label: "Monthly Plan", icon: "CalendarCheck" },
+    ],
+  },
   { href: "/todo", label: "To-Do", icon: "ListChecks" },
-  { href: "/monthly-plan", label: "Monthly Plan", icon: "CalendarCheck" },
-  { href: "/reflection", label: "Reflection", icon: "NotebookPen" },
-  { href: "/settings", label: "Settings", icon: "Settings" },
 ] as const;
 
 // Bottom nav on mobile shows a curated subset; "More" opens a full drawer with every page.
 export const BOTTOM_NAV_ITEMS = [
   { href: "/overview", label: "Home", icon: "LayoutDashboard" },
   { href: "/checkin", label: "Check-In", icon: "CheckCircle2" },
-  { href: "/finance", label: "Finance", icon: "Wallet" },
+  { href: "/career/finance", label: "Finance", icon: "Wallet" },
   { href: "/todo", label: "To-Do", icon: "ListChecks" },
   { href: "__more__", label: "More", icon: "Menu" },
 ] as const;
