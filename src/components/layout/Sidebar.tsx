@@ -21,7 +21,7 @@ export function Sidebar() {
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto">
         {NAV_ITEMS.map((item) => {
           if ("children" in item) {
-            const Icon = Icons[item.icon] as React.ElementType;
+            const Icon = (Icons as Record<string, React.ElementType>)[item.icon];
             const open = careerOpen;
             return (
               <div key={item.label}>
@@ -39,7 +39,7 @@ export function Sidebar() {
                 {open && (
                   <div className="ml-4 mt-1 flex flex-col gap-0.5 border-l border-border pl-3">
                     {item.children.map((child) => {
-                      const ChildIcon = Icons[child.icon] as React.ElementType;
+                      const ChildIcon = (Icons as Record<string, React.ElementType>)[child.icon];
                       const active = pathname === child.href;
                       return (
                         <Link
@@ -61,7 +61,7 @@ export function Sidebar() {
             );
           }
 
-          const Icon = Icons[item.icon] as React.ElementType;
+          const Icon = (Icons as Record<string, React.ElementType>)[item.icon];
           const active = pathname === item.href;
           return (
             <Link

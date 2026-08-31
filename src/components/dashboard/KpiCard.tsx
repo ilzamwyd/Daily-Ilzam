@@ -15,7 +15,7 @@ export function KpiCard({
   icon: keyof typeof Icons;
   colorClass: string;
 }) {
-  const Icon = Icons[icon] as React.ElementType;
+  const Icon = (Icons as Record<string, React.ElementType>)[icon];
   return (
     <Card className="animate-fade-up p-5">
       <div className="flex items-start justify-between">

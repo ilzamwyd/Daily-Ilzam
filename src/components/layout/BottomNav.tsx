@@ -16,7 +16,7 @@ export function BottomNav() {
       <nav className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-around border-t border-border bg-card/95 px-2 py-2 backdrop-blur md:hidden">
         {BOTTOM_NAV_ITEMS.map((item) => {
           if (item.href === "__more__") {
-            const Icon = Icons[item.icon] as React.ElementType;
+            const Icon = (Icons as Record<string, React.ElementType>)[item.icon];
             return (
               <button
                 key="more"
@@ -28,7 +28,7 @@ export function BottomNav() {
               </button>
             );
           }
-          const Icon = Icons[item.icon] as React.ElementType;
+          const Icon = (Icons as Record<string, React.ElementType>)[item.icon];
           const active = pathname === item.href;
           return (
             <Link
@@ -61,7 +61,7 @@ export function BottomNav() {
             </div>
             <div className="grid grid-cols-3 gap-2">
               {NAV_ITEMS.flatMap((item) => ("children" in item ? item.children : [item])).map((item) => {
-                const Icon = Icons[item.icon] as React.ElementType;
+                const Icon = (Icons as Record<string, React.ElementType>)[item.icon];
                 const active = pathname === item.href;
                 return (
                   <Link

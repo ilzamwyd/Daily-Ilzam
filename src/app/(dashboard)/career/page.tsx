@@ -21,7 +21,7 @@ export default function CareerHubPage() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {SECTIONS.map((s) => {
-          const Icon = Icons[s.icon] as React.ElementType;
+          const Icon = (Icons as Record<string, React.ElementType>)[s.icon];
           return (
             <Link key={s.href} href={s.href}>
               <Card className="flex h-full flex-col gap-3 p-5 transition-transform hover:-translate-y-0.5">

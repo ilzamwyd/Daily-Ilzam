@@ -11,7 +11,7 @@ interface SectionCardProps {
 }
 
 export function SectionCard({ title, description, icon, colorClass, children }: SectionCardProps) {
-  const Icon = Icons[icon] as React.ElementType;
+  const Icon = (Icons as Record<string, React.ElementType>)[icon];
   return (
     <Card className="animate-fade-up">
       <CardHeader className="flex-row items-center gap-3 space-y-0">
