@@ -323,7 +323,13 @@ export default function MomPage() {
                     {m.meeting_date} · {m.role_context}
                   </span>
                 </div>
-                {m.summary && <p className="mt-2 text-sm text-muted-foreground">{m.summary}</p>}
+                {m.summary ? (
+                  <p className="mt-2 text-sm text-muted-foreground">{m.summary}</p>
+                ) : m.raw_notes ? (
+                  <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{m.raw_notes}</p>
+                ) : (
+                  <p className="mt-2 text-sm italic text-muted-foreground">No notes were saved for this meeting.</p>
+                )}
                 {!m.summary && aiEnabled && m.raw_notes && (
                   <Button
                     type="button"
