@@ -9,8 +9,22 @@ import { ChevronDown } from "lucide-react";
 
 export function Sidebar() {
   const pathname = usePathname();
-  const isOnCareerPage = pathname?.startsWith("/career");
-  const [careerOpen, setCareerOpen] = useState(isOnCareerPage);
+
+  const initialOpen = new Set(
+    NAV_ITEMS.filter((item) => "children" in item && item.children.some((c) => pathname === c.href || pathname?.startsWith(c.href + "/"))).map(
+      (item) => item.label
+    )
+  );
+  const [openGroups, setOpenGroups] = useState<Set<string>>(initialOpen);
+
+  function toggleGroup(label: string) {
+    setOpenGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      return next;
+    });
+  }
 
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-card/50 px-4 py-6 md:flex">
@@ -22,14 +36,15 @@ export function Sidebar() {
         {NAV_ITEMS.map((item) => {
           if ("children" in item) {
             const Icon = (Icons as unknown as Record<string, React.ElementType>)[item.icon];
-            const open = careerOpen;
+            const open = openGroups.has(item.label);
+            const isActiveGroup = item.children.some((c) => pathname === c.href || pathname?.startsWith(c.href + "/"));
             return (
               <div key={item.label}>
                 <button
-                  onClick={() => setCareerOpen((o) => !o)}
+                  onClick={() => toggleGroup(item.label)}
                   className={cn(
                     "flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-colors",
-                    isOnCareerPage ? "bg-career-light text-career" : "text-foreground hover:bg-muted"
+                    isActiveGroup ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted"
                   )}
                 >
                   <Icon className="h-4 w-4" />

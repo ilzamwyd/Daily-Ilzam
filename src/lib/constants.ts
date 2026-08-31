@@ -28,9 +28,16 @@ export type NavItem = NavLeaf | NavGroup;
 export const NAV_ITEMS: NavItem[] = [
   { href: "/overview", label: "Overview", icon: "LayoutDashboard" },
   { href: "/checkin", label: "Daily Check-In", icon: "CheckCircle2" },
-  { href: "/health", label: "Health", icon: "HeartPulse" },
-  { href: "/mind", label: "Mind", icon: "Brain" },
-  { href: "/social", label: "Social", icon: "Users" },
+  {
+    label: "Health",
+    icon: "HeartPulse",
+    children: [
+      { href: "/health", label: "Overview", icon: "LayoutDashboard" },
+      { href: "/health/fit", label: "Fit", icon: "HeartPulse" },
+      { href: "/health/mind", label: "Mind", icon: "Brain" },
+      { href: "/health/social", label: "Social", icon: "Users" },
+    ],
+  },
   {
     label: "Career",
     icon: "Briefcase",
