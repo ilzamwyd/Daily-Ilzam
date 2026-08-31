@@ -8,10 +8,9 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { formatIDR } from "@/lib/finance";
 import { Plus, Check, Circle, Trash2 } from "lucide-react";
-import { formatDateISO } from "@/lib/utils";
 
 function todayStr() {
-  return formatDateISO(new Date());
+  return new Date().toISOString().slice(0, 10);
 }
 function monthStr() {
   const d = new Date();

@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Plus, Sparkles, Loader2, Trash2, Flame } from "lucide-react";
-import { useAiEnabled } from "@/lib/useAiEnabled";
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
@@ -14,7 +13,6 @@ function todayStr() {
 
 export function CalorieTracker() {
   const supabase = createClient();
-  const aiEnabled = useAiEnabled();
   const [userId, setUserId] = useState<string | null>(null);
   const [library, setLibrary] = useState<FoodLibraryItem[]>([]);
   const [todayLog, setTodayLog] = useState<FoodLogEntry[]>([]);
@@ -173,7 +171,7 @@ export function CalorieTracker() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {!calories && name.trim() && aiEnabled && (
+          {!calories && name.trim() && (
             <Button type="button" size="sm" variant="soft" className="gap-1.5" onClick={handleEstimate} disabled={estimating}>
               {estimating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
               {estimating ? "Estimating…" : "Estimate with AI"}
