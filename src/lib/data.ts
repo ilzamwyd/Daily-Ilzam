@@ -99,3 +99,39 @@ export async function getBudgetsForMonth(
   }
   return (data ?? []) as MonthlyBudget[];
 }
+
+export async function getTransactionsForRange(
+  supabase: SupabaseClient,
+  userId: string,
+  start: string,
+  end: string
+): Promise<Transaction[]> {
+  const { data, error } = await supabase
+    .from("transactions")
+    .select("*")
+    .eq("user_id", userId)
+    .gte("date", start)
+    .lte("date", end)
+    .order("date", { ascending: false })
+    .order("time", { ascending: false });
+
+  if (error) {
+    console.error("getTransactionsForRange error", error.message);
+    return [];
+  }
+  return (data ?? []) as Transaction[];
+}
+
+export async function getBudgetsForMonths(
+  supabase: SupabaseClient,
+  userId: string,
+  monthKeys: string[]
+): Promise<MonthlyBudget[]> {
+  const { data, error } = await supabase.from("monthly_budgets").select("*").eq("user_id", userId).in("month", monthKeys);
+
+  if (error) {
+    console.error("getBudgetsForMonths error", error.message);
+    return [];
+  }
+  return (data ?? []) as MonthlyBudget[];
+}

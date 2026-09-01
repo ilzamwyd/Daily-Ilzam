@@ -144,3 +144,95 @@ export function formatIDR(amount: number): string {
     amount
   );
 }
+
+// ---- Period-aware budgeting (arbitrary date ranges, not just calendar months) ----
+
+function daysInCalendarMonth(monthKey: string): number {
+  const [y, m] = monthKey.split("-").map(Number);
+  return new Date(y, m, 0).getDate();
+}
+
+function monthsTouchedByRange(start: string, end: string): string[] {
+  const months: string[] = [];
+  const [sy, sm] = start.split("-").map(Number);
+  const [ey, em] = end.split("-").map(Number);
+  let y = sy;
+  let m = sm;
+  while (y < ey || (y === ey && m <= em)) {
+    months.push(`${y}-${String(m).padStart(2, "0")}`);
+    m++;
+    if (m > 12) {
+      m = 1;
+      y++;
+    }
+  }
+  return months;
+}
+
+export function monthKeysForRange(start: string, end: string): string[] {
+  return monthsTouchedByRange(start, end).map((m) => `${m}-01`);
+}
+
+// Prorates each touched month's budget by how many days of that month fall inside
+// [start, end], then sums across months. This is the "run-rate" budget for any
+// arbitrary period, whether it's a full month, a custom range, or spans months.
+export function prorateBudgetsForRange(allBudgets: MonthlyBudget[], start: string, end: string): MonthlyBudget[] {
+  const months = monthsTouchedByRange(start, end);
+  const result = new Map<string, MonthlyBudget>();
+
+  for (const monthKey of months) {
+    const monthStart = `${monthKey}-01`;
+    const dim = daysInCalendarMonth(monthKey);
+    const monthEnd = `${monthKey}-${String(dim).padStart(2, "0")}`;
+    const overlapStart = start > monthStart ? start : monthStart;
+    const overlapEnd = end < monthEnd ? end : monthEnd;
+    const overlapDays = Math.max(
+      0,
+      Math.round((new Date(overlapEnd).getTime() - new Date(overlapStart).getTime()) / 86400000) + 1
+    );
+    if (overlapDays <= 0) continue;
+    const fraction = overlapDays / dim;
+
+    for (const b of allBudgets.filter((row) => row.month.startsWith(monthKey))) {
+      const key = `${b.type}:${b.code}:${b.category}`;
+      const proratedAmt = Number(b.budgeted_amount) * fraction;
+      const existing = result.get(key);
+      if (existing) existing.budgeted_amount = Number(existing.budgeted_amount) + proratedAmt;
+      else result.set(key, { ...b, budgeted_amount: proratedAmt, month: `${monthKey}-01` });
+    }
+  }
+
+  return Array.from(result.values());
+}
+
+// Same shape as summarizeByCode, but works off an already-prorated budget list and
+// an explicit "days left in period" instead of assuming a calendar month.
+export function summarizeByCodeForPeriod(
+  transactions: Transaction[],
+  proratedBudgets: MonthlyBudget[],
+  daysRemainingInPeriod: number,
+  type: TransactionType = "expense"
+): CategorySpend[] {
+  const codes = type === "expense" ? EXPENSE_CODES : ["Income"];
+  return codes.map((code) => {
+    const budgeted = proratedBudgets.filter((b) => b.type === type && b.code === code).reduce((s, b) => s + Number(b.budgeted_amount), 0);
+    const spent = transactions.filter((t) => t.type === type && t.code === code).reduce((s, t) => s + Number(t.amount), 0);
+    const remaining = budgeted - spent;
+    return {
+      code,
+      budgeted,
+      spent,
+      remaining,
+      pctUsed: budgeted > 0 ? spent / budgeted : 0,
+      dailyRec: remaining > 0 && daysRemainingInPeriod > 0 ? remaining / daysRemainingInPeriod : 0,
+      weeklyRec: remaining > 0 && daysRemainingInPeriod > 0 ? (remaining / daysRemainingInPeriod) * 7 : 0,
+    };
+  });
+}
+
+export function daysRemainingInRange(end: string): number {
+  const today = new Date();
+  const endDate = new Date(end);
+  const diff = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  return Math.max(0, diff);
+}

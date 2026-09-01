@@ -48,7 +48,6 @@ export const NAV_ITEMS: NavItem[] = [
       { href: "/career/content", label: "Content", icon: "Sprout" },
       { href: "/career/business", label: "Business", icon: "Store" },
       { href: "/career/finance", label: "Finance", icon: "Wallet" },
-      { href: "/career/monthly-plan", label: "Monthly Plan", icon: "CalendarCheck" },
     ],
   },
   { href: "/todo", label: "To-Do", icon: "ListChecks" },

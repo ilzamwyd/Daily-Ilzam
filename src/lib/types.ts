@@ -25,6 +25,8 @@ export interface DailyLog {
   pt_session: boolean;
   exercise_type: ExerciseType | null;
   exercise_duration: number | null;
+  gym_duration_minutes: number | null;
+  gym_notes: string | null;
 
   healthygo: boolean;
   other_meals_controlled: boolean;
@@ -104,8 +106,21 @@ export interface ContentProgressItem {
   account: string | null;
   result_notes: string | null;
   next_action: string | null;
+  published_date?: string | null;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface ContentEngagement {
+  id?: string;
+  user_id?: string;
+  content_id: string;
+  week_start: string;
+  views: number | null;
+  likes: number | null;
+  comments: number | null;
+  shares: number | null;
+  created_at?: string;
 }
 
 export interface EnglishSession {
@@ -132,6 +147,9 @@ export interface EnglishVocab {
   word: string;
   note: string | null;
   date?: string;
+  review_count?: number;
+  next_review_date?: string;
+  last_reviewed_at?: string | null;
   created_at?: string;
 }
 
@@ -255,6 +273,17 @@ export interface FoodLogEntry {
   created_at?: string;
 }
 
+export interface ActivityLog {
+  id?: string;
+  user_id?: string;
+  date: string;
+  activity_type: "Running" | "Badminton" | "Walking" | "Other";
+  duration_minutes: number | null;
+  distance_km: number | null;
+  notes: string | null;
+  created_at?: string;
+}
+
 export interface WorkoutLogEntry {
   id?: string;
   user_id?: string;
@@ -301,6 +330,8 @@ export function emptyDailyLog(date: string): DailyLog {
     pt_session: false,
     exercise_type: null,
     exercise_duration: null,
+    gym_duration_minutes: null,
+    gym_notes: null,
     healthygo: false,
     other_meals_controlled: false,
     stress_eating: "no",
