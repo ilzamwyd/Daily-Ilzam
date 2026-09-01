@@ -18,6 +18,7 @@ export function MealSlotLogger({ date, slot, label }: { date: string; slot: Slot
   const [name, setName] = useState("");
   const [calories, setCalories] = useState("");
   const [estimating, setEstimating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -59,20 +60,25 @@ export function MealSlotLogger({ date, slot, label }: { date: string; slot: Slot
 
   async function handleAdd() {
     if (!userId || !name.trim() || !calories) return;
+    setError(null);
     const cal = Number(calories);
 
     let libraryId = matchedFood?.id;
     if (!matchedFood) {
-      const { data } = await supabase
+      const { data, error: libErr } = await supabase
         .from("food_library")
         .upsert({ user_id: userId, name: name.trim(), calories: cal, serving_label: "1 portion", source: "manual" }, { onConflict: "user_id,name" })
         .select()
         .single();
+      if (libErr) {
+        setError(libErr.message);
+        return;
+      }
       libraryId = data?.id;
       if (data) setLibrary((prev) => [...prev, data as FoodLibraryItem]);
     }
 
-    const { data: entry } = await supabase
+    const { data: entry, error: logErr } = await supabase
       .from("food_log")
       .insert({
         user_id: userId,
@@ -86,6 +92,10 @@ export function MealSlotLogger({ date, slot, label }: { date: string; slot: Slot
       })
       .select()
       .single();
+    if (logErr) {
+      setError(logErr.message);
+      return;
+    }
     if (entry) setEntries((prev) => [...prev, entry as FoodLogEntry]);
     setName("");
     setCalories("");
@@ -152,6 +162,7 @@ export function MealSlotLogger({ date, slot, label }: { date: string; slot: Slot
           <Plus className="h-4 w-4" />
         </Button>
       </div>
+      {error && <p className="mt-1 text-xs text-critical">{error}</p>}
     </div>
   );
 }

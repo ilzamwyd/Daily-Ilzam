@@ -13,6 +13,7 @@ export function WaterLogger({ date }: { date: string }) {
   const [userId, setUserId] = useState<string | null>(null);
   const [entries, setEntries] = useState<WaterLogEntry[]>([]);
   const [customAmount, setCustomAmount] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -34,7 +35,12 @@ export function WaterLogger({ date }: { date: string }) {
 
   async function addWater(ml: number) {
     if (!userId || ml <= 0) return;
-    const { data } = await supabase.from("water_log").insert({ user_id: userId, date, amount_ml: ml }).select().single();
+    setError(null);
+    const { data, error: err } = await supabase.from("water_log").insert({ user_id: userId, date, amount_ml: ml }).select().single();
+    if (err) {
+      setError(err.message);
+      return;
+    }
     if (data) setEntries((prev) => [...prev, data as WaterLogEntry]);
   }
 
@@ -81,6 +87,8 @@ export function WaterLogger({ date }: { date: string }) {
           Add
         </Button>
       </div>
+
+      {error && <p className="mt-1.5 text-xs text-critical">{error}</p>}
 
       {entries.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5">

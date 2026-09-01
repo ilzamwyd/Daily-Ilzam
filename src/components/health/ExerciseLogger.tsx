@@ -13,6 +13,7 @@ export function ExerciseLogger({ date }: { date: string }) {
   const [entries, setEntries] = useState<WorkoutLogEntry[]>([]);
   const [name, setName] = useState("");
   const [duration, setDuration] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -33,11 +34,16 @@ export function ExerciseLogger({ date }: { date: string }) {
 
   async function handleAdd() {
     if (!userId || !name.trim()) return;
-    const { data } = await supabase
+    setError(null);
+    const { data, error: err } = await supabase
       .from("workout_log")
       .insert({ user_id: userId, date, exercise_name: name.trim(), duration_minutes: duration ? Number(duration) : null })
       .select()
       .single();
+    if (err) {
+      setError(err.message);
+      return;
+    }
     if (data) {
       setEntries((prev) => [...prev, data as WorkoutLogEntry]);
       setPastNames((prev) => Array.from(new Set([...prev, name.trim()])).sort());
@@ -84,6 +90,7 @@ export function ExerciseLogger({ date }: { date: string }) {
           <Plus className="h-4 w-4" />
         </Button>
       </div>
+      {error && <p className="mt-1 text-xs text-critical">{error}</p>}
     </div>
   );
 }
