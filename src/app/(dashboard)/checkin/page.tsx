@@ -10,13 +10,16 @@ import { Segmented } from "@/components/ui/segmented";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { EXERCISE_TYPES, SOCIAL_TYPES, RECOVERY_TYPES } from "@/lib/constants";
+import { SOCIAL_TYPES, RECOVERY_TYPES } from "@/lib/constants";
 import { CheckCircle2, Calendar } from "lucide-react";
 import { MealSlotLogger } from "@/components/health/MealSlotLogger";
 import { ExerciseLogger } from "@/components/health/ExerciseLogger";
+import { ActivityLogger } from "@/components/health/ActivityLogger";
 import { WaterLogger } from "@/components/health/WaterLogger";
 import { EnglishSessionLogger } from "@/components/growth/EnglishSessionLogger";
 import { VocabLogger } from "@/components/growth/VocabLogger";
+import { VocabReview } from "@/components/growth/VocabReview";
+import { WeeklyRoleReviewInput } from "@/components/career/WeeklyRoleReviewInput";
 
 export default function CheckInPage() {
   const supabase = createClient();
@@ -111,18 +114,22 @@ export default function CheckInPage() {
         </div>
       </SectionCard>
 
-      <SectionCard title="Fitness" icon="Dumbbell" colorClass="bg-fitness-light text-fitness">
+      <SectionCard title="Gym" icon="Dumbbell" colorClass="bg-fitness-light text-fitness">
         <ToggleRow label="Gym completed?" checked={log.gym} onChange={(v) => update("gym", v)} activeClassName="bg-fitness" />
         <ToggleRow label="PT session?" checked={log.pt_session} onChange={(v) => update("pt_session", v)} activeClassName="bg-fitness" />
         <div>
-          <label className="mb-2 block text-sm font-medium">Exercise type</label>
-          <Segmented options={EXERCISE_TYPES} value={log.exercise_type} onChange={(v) => update("exercise_type", v)} activeClassName="bg-fitness text-white border-fitness" />
-        </div>
-        <div>
-          <label className="mb-1.5 block text-sm font-medium">Duration (minutes, optional)</label>
-          <Input type="number" value={log.exercise_duration ?? ""} onChange={(e) => update("exercise_duration", e.target.value ? Number(e.target.value) : null)} />
+          <label className="mb-1.5 block text-sm font-medium">Gym duration (minutes, optional)</label>
+          <Input type="number" value={log.gym_duration_minutes ?? ""} onChange={(e) => update("gym_duration_minutes", e.target.value ? Number(e.target.value) : null)} />
         </div>
         <ExerciseLogger date={date} />
+        <div>
+          <label className="mb-1.5 block text-sm font-medium">Insight from today's session (optional)</label>
+          <Textarea rows={2} placeholder="e.g. Felt strong on squats, PR on bench, form was off on deadlifts…" value={log.gym_notes ?? ""} onChange={(e) => update("gym_notes", e.target.value)} />
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Other Activity" icon="Bike" colorClass="bg-fitness-light text-fitness">
+        <ActivityLogger date={date} />
       </SectionCard>
 
       <SectionCard title="Nutrition" icon="Apple" colorClass="bg-health-light text-health">
@@ -182,14 +189,20 @@ export default function CheckInPage() {
         )}
       </SectionCard>
 
-      <SectionCard title="Personal Growth" icon="Sprout" colorClass="bg-growth-light text-growth">
+      <SectionCard title="English" icon="Languages" colorClass="bg-growth-light text-growth">
         <div>
           <label className="mb-1.5 block text-sm font-medium">English practice</label>
           <EnglishSessionLogger date={date} />
         </div>
         <div className="border-t border-border pt-4">
+          <VocabReview />
+        </div>
+        <div className="border-t border-border pt-4">
           <VocabLogger date={date} />
         </div>
+      </SectionCard>
+
+      <SectionCard title="Content" icon="Sprout" colorClass="bg-growth-light text-growth">
         <ToggleRow label="Content worked on?" checked={log.content_worked} onChange={(v) => update("content_worked", v)} activeClassName="bg-growth" />
         <ToggleRow label="Content published?" checked={log.content_published} onChange={(v) => update("content_published", v)} activeClassName="bg-growth" />
       </SectionCard>
@@ -211,6 +224,10 @@ export default function CheckInPage() {
         <div>
           <label className="mb-1.5 block text-sm font-medium">Today's biggest work pressure (optional)</label>
           <Textarea rows={2} value={log.work_pressure_note ?? ""} onChange={(e) => update("work_pressure_note", e.target.value)} />
+        </div>
+        <div className="border-t border-border pt-4">
+          <label className="mb-1.5 block text-sm font-medium">Career Energy vs Career Drain — this week's snapshot</label>
+          <WeeklyRoleReviewInput />
         </div>
       </SectionCard>
 

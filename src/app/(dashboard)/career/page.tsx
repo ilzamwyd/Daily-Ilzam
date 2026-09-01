@@ -8,7 +8,6 @@ const SECTIONS = [
   { href: "/career/content", label: "Content", desc: "Idea → started → editing → published", icon: "Sprout", color: "bg-growth-light text-growth" },
   { href: "/career/business", label: "Business", desc: "Setup checklist and daily sales", icon: "Store", color: "bg-finance-light text-finance" },
   { href: "/career/finance", label: "Finance", desc: "Budget, transactions, monthly reports", icon: "Wallet", color: "bg-finance-light text-finance" },
-  { href: "/career/monthly-plan", label: "Monthly Plan", desc: "This month's priorities + curhat session", icon: "CalendarCheck", color: "bg-social-light text-social" },
 ] as const;
 
 export default function CareerHubPage() {

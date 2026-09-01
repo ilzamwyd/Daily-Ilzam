@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Plus, X, Droplet } from "lucide-react";
 
-const QUICK_AMOUNTS = [250, 500, 750];
+const QUICK_AMOUNTS = [250, 500, 750, 1200];
 
 export function WaterLogger({ date }: { date: string }) {
   const supabase = createClient();

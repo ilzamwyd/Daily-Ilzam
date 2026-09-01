@@ -6,7 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Segmented } from "@/components/ui/segmented";
 import { ContentProgressItem } from "@/lib/types";
-import { Plus, Sprout } from "lucide-react";
+import { Plus, Sprout, Calendar as CalendarIcon } from "lucide-react";
+import { formatDateISO } from "@/lib/utils";
+import { ContentCalendar } from "@/components/growth/ContentCalendar";
+import { ContentEngagementPanel } from "@/components/growth/ContentEngagementPanel";
 
 const STAGES = ["idea", "started", "editing", "published"] as const;
 const ACCOUNTS = ["ilzamwyd", "zzamallll", "Other"] as const;
@@ -67,6 +70,21 @@ export default function ContentPage() {
       <Card>
         <CardHeader className="flex-row items-center gap-3 space-y-0">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-growth-light text-growth">
+            <CalendarIcon className="h-5 w-5" />
+          </div>
+          <div>
+            <CardTitle>Publishing Calendar</CardTitle>
+            <CardDescription>Consistency and quantity, at a glance.</CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <ContentCalendar />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex-row items-center gap-3 space-y-0">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-growth-light text-growth">
             <Sprout className="h-5 w-5" />
           </div>
           <div>
@@ -98,8 +116,10 @@ export default function ContentPage() {
                       options={STAGES}
                       value={item.stage}
                       onChange={(s) => {
-                        patchItem(item.id!, { stage: s });
-                        saveItem(item.id!, { stage: s });
+                        const patch: Partial<ContentProgressItem> =
+                          s === "published" && !item.published_date ? { stage: s, published_date: formatDateISO(new Date()) } : { stage: s };
+                        patchItem(item.id!, patch);
+                        saveItem(item.id!, patch);
                       }}
                       activeClassName="bg-growth text-white border-growth"
                     />
@@ -126,6 +146,7 @@ export default function ContentPage() {
                     onChange={(e) => patchItem(item.id!, { next_action: e.target.value })}
                     onBlur={(e) => saveItem(item.id!, { next_action: e.target.value })}
                   />
+                  {item.stage === "published" && item.id && <ContentEngagementPanel contentId={item.id} />}
                 </li>
               ))}
             </ul>

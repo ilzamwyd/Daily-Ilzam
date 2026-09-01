@@ -3,10 +3,11 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { EnglishGoal, EnglishVocab, EnglishSession } from "@/lib/types";
-import { ENGLISH_ASPECTS, ASPECT_GUIDANCE } from "@/lib/english";
+import { ENGLISH_ASPECTS } from "@/lib/english";
 import { Languages, Check, Circle } from "lucide-react";
 import { formatDateISO, daysAgo } from "@/lib/utils";
 import { EnglishSessionsChart } from "@/components/charts/EnglishSessionsChart";
+import { VocabWordCloud } from "@/components/growth/VocabWordCloud";
 
 export default function EnglishPage() {
   const supabase = createClient();
@@ -53,7 +54,17 @@ export default function EnglishPage() {
   const aspectStats = ENGLISH_ASPECTS.map((aspect) => {
     const aspectSessions = sessions.filter((s) => s.aspect === aspect);
     const last = aspectSessions[0];
-    return { aspect, count: aspectSessions.length, lastDate: last?.date ?? null };
+    const totalMinutes = aspectSessions.reduce((sum, s) => sum + (s.duration_minutes ?? 0), 0);
+    const last4Weeks = formatDateISO(daysAgo(27));
+    const prev4WeeksStart = formatDateISO(daysAgo(55));
+    const prev4WeeksEnd = formatDateISO(daysAgo(28));
+    const recentCount = aspectSessions.filter((s) => s.date >= last4Weeks).length;
+    const priorCount = aspectSessions.filter((s) => s.date >= prev4WeeksStart && s.date <= prev4WeeksEnd).length;
+    let trend: "up" | "down" | "flat" | "new" = "flat";
+    if (priorCount === 0 && recentCount > 0) trend = "new";
+    else if (recentCount > priorCount) trend = "up";
+    else if (recentCount < priorCount) trend = "down";
+    return { aspect, count: aspectSessions.length, totalMinutes, lastDate: last?.date ?? null, recentCount, priorCount, trend };
   });
 
   async function toggleGoal(goal: EnglishGoal) {
@@ -123,17 +134,28 @@ export default function EnglishPage() {
       <Card>
         <CardHeader>
           <CardTitle>Progress by Aspect</CardTitle>
-          <CardDescription>Last 8 weeks.</CardDescription>
+          <CardDescription>
+            Last 8 weeks — how much you've practiced each aspect, and the trend vs the 4 weeks before that.
+            {nextGoal && ` Working toward "${nextGoal.level_label}" — all aspects feed into that.`}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {aspectStats.map(({ aspect, count, lastDate }) => (
+            {aspectStats.map(({ aspect, count, totalMinutes, lastDate, recentCount, priorCount, trend }) => (
               <div key={aspect} className="rounded-2xl bg-muted p-3">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold">{aspect}</p>
-                  <span className="text-xs text-muted-foreground">{count} session{count === 1 ? "" : "s"}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {count} session{count === 1 ? "" : "s"} total{totalMinutes > 0 ? ` · ${totalMinutes} min` : ""}
+                  </span>
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">{ASPECT_GUIDANCE[aspect]}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {recentCount} in the last 4 weeks (was {priorCount} the 4 weeks before)
+                  {trend === "up" && " — trending up"}
+                  {trend === "down" && " — slowing down"}
+                  {trend === "new" && " — just started"}
+                  {trend === "flat" && recentCount > 0 && " — holding steady"}
+                </p>
                 {lastDate && <p className="mt-1 text-xs text-growth">Last practiced: {lastDate}</p>}
               </div>
             ))}
@@ -164,20 +186,10 @@ export default function EnglishPage() {
       <Card>
         <CardHeader>
           <CardTitle>Vocabulary Recap</CardTitle>
-          <CardDescription>Add new words from your Daily Check-In — this is just the list.</CardDescription>
+          <CardDescription>Add new words from your Daily Check-In. Bigger, amber words need more review.</CardDescription>
         </CardHeader>
         <CardContent>
-          {vocab.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No words logged yet.</p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {vocab.map((v) => (
-                <span key={v.id} title={v.note ?? ""} className="rounded-full bg-muted px-3 py-1 text-xs font-medium">
-                  {v.word}
-                </span>
-              ))}
-            </div>
-          )}
+          <VocabWordCloud words={vocab} />
         </CardContent>
       </Card>
     </div>

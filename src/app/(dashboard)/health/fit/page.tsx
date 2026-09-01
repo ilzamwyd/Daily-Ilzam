@@ -32,6 +32,15 @@ export default async function FitPage() {
     .order("created_at", { ascending: false })
     .limit(15);
 
+  const { data: recentActivities } = await supabase
+    .from("activity_log")
+    .select("*")
+    .eq("user_id", user.id)
+    .gte("date", formatDateISO(since))
+    .order("date", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(15);
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -123,6 +132,44 @@ export default async function FitPage() {
           </CardContent>
         </Card>
       </div>
+
+      {recentActivities && recentActivities.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Other Activities</CardTitle>
+            <CardDescription>Running, badminton, walking, and everything else that isn't the gym.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col divide-y divide-border">
+              {recentActivities.map((a) => {
+                const pace =
+                  a.duration_minutes && a.distance_km
+                    ? (() => {
+                        const p = a.duration_minutes / a.distance_km;
+                        const m = Math.floor(p);
+                        const s = Math.round((p - m) * 60);
+                        return `${m}:${String(s).padStart(2, "0")} /km`;
+                      })()
+                    : null;
+                return (
+                  <div key={a.id} className="flex items-center justify-between py-2 text-sm">
+                    <div>
+                      <span className="font-medium">{a.activity_type}</span>
+                      {a.notes && <p className="text-xs text-muted-foreground">{a.notes}</p>}
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {a.date}
+                      {a.duration_minutes ? ` · ${a.duration_minutes} min` : ""}
+                      {a.distance_km ? ` · ${a.distance_km} km` : ""}
+                      {pace ? ` · ${pace}` : ""}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

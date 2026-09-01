@@ -15,6 +15,7 @@ export function QuickAddTransaction({ onSaved }: { onSaved?: () => void }) {
   const [code, setCode] = useState<string>(EXPENSE_CODES[0]);
   const [category, setCategory] = useState<string>(subcategoriesFor(EXPENSE_CODES[0])[0]);
   const [source, setSource] = useState<string>("Cash");
+  const [date, setDate] = useState(todayStr());
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
@@ -50,7 +51,7 @@ export function QuickAddTransaction({ onSaved }: { onSaved?: () => void }) {
     }
     const payload: Transaction = {
       user_id: user.id,
-      date: todayStr(),
+      date,
       time: nowTimeStr(),
       type,
       amount: amountNum,
@@ -82,6 +83,11 @@ export function QuickAddTransaction({ onSaved }: { onSaved?: () => void }) {
         onChange={switchType}
         activeClassName="bg-finance text-white"
       />
+
+      <div>
+        <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Date</label>
+        <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+      </div>
 
       <div>
         <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Amount (Rp)</label>

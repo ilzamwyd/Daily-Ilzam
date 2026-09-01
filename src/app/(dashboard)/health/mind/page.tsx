@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { MindTrendChart } from "@/components/charts/MindTrendChart";
 import { SleepTrendChart } from "@/components/charts/SleepTrendChart";
 import { generatePatterns } from "@/lib/insights";
+import { computeCareerSignals } from "@/lib/career";
+import { CareerReview } from "@/lib/types";
 import { Lightbulb } from "lucide-react";
 
 export default async function MindPage() {
@@ -14,6 +16,13 @@ export default async function MindPage() {
   const logs = await getRecentLogs(supabase, user.id, 90);
   const targets = await getTargets(supabase, user.id);
   const patterns = generatePatterns(logs);
+
+  const { data: reviewData } = await supabase.from("career_reviews").select("*").eq("user_id", user.id).order("week_start", { ascending: true });
+  const signals = computeCareerSignals((reviewData as CareerReview[]) ?? []);
+  const careerPatterns = [signals.main, signals.expanded, signals.combined]
+    .filter((s) => s.tone !== "unknown")
+    .map((s) => ({ text: `${s.label} at work: ${s.text}` }));
+  const allPatterns = [...patterns, ...careerPatterns];
 
   return (
     <div className="flex flex-col gap-6">
@@ -47,11 +56,11 @@ export default async function MindPage() {
           <CardDescription>Correlations only — never a diagnosis.</CardDescription>
         </CardHeader>
         <CardContent>
-          {patterns.length === 0 ? (
+          {allPatterns.length === 0 ? (
             <p className="text-sm text-muted-foreground">Keep logging — patterns need a couple weeks of data to surface.</p>
           ) : (
             <ul className="flex flex-col gap-3">
-              {patterns.map((p, i) => (
+              {allPatterns.map((p, i) => (
                 <li key={i} className="flex items-start gap-3 rounded-2xl bg-mental-light px-4 py-3 text-sm text-mental">
                   <Lightbulb className="mt-0.5 h-4 w-4 shrink-0" />
                   <span>{p.text}</span>

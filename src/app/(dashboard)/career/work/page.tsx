@@ -2,26 +2,23 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Slider } from "@/components/ui/slider";
-import { Button } from "@/components/ui/button";
 import { DailyLog, CareerReview } from "@/lib/types";
-import { average, formatDateISO, daysAgo, startOfWeek, round1 } from "@/lib/utils";
+import { average, formatDateISO, daysAgo, round1 } from "@/lib/utils";
 import { ScatterChart, Scatter, XAxis, YAxis, ZAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
-import { Briefcase, TrendingUp, TrendingDown } from "lucide-react";
+import { Briefcase, TrendingUp } from "lucide-react";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { MICROCOPY } from "@/lib/constants";
 import { Tabs } from "@/components/ui/tabs";
 import { MomSection } from "@/components/career/MomSection";
+import { CareerCalendar } from "@/components/career/CareerCalendar";
+import { computeCareerSignals, CareerSignal } from "@/lib/career";
+import { Activity } from "lucide-react";
 
 export default function WorkPage() {
   const supabase = createClient();
   const [logs, setLogs] = useState<DailyLog[]>([]);
   const [reviews, setReviews] = useState<CareerReview[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-
-  const [mainReview, setMainReview] = useState<Partial<CareerReview>>({ role: "main" });
-  const [expandedReview, setExpandedReview] = useState<Partial<CareerReview>>({ role: "expanded" });
 
   async function load() {
     setLoading(true);
@@ -46,7 +43,6 @@ export default function WorkPage() {
   const avgMainWorkload = average(last7.map((l) => l.main_role_workload));
   const avgDataWorkload = average(last7.map((l) => l.data_role_workload));
   const afterNine = last7.filter((l) => l.worked_after_9).length;
-  const avgFinish = last7.filter((l) => l.work_finish_time).length;
   const recoveryAfterIntense = useMemo(() => {
     const intenseDays = logs.filter((l) => (l.main_role_workload ?? 0) >= 8 || (l.data_role_workload ?? 0) >= 8);
     if (!intenseDays.length) return null;
@@ -58,20 +54,8 @@ export default function WorkPage() {
     return Math.round((withRecoveryNextDay.length / intenseDays.length) * 100);
   }, [logs]);
 
-  async function saveReview(role: "main" | "expanded") {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    setSaving(true);
-    const week_start = formatDateISO(startOfWeek());
-    const payload = role === "main" ? mainReview : expandedReview;
-    const { data } = await supabase
-      .from("career_reviews")
-      .upsert({ ...payload, role, week_start, user_id: user.id }, { onConflict: "user_id,week_start,role" })
-      .select()
-      .single();
-    if (data) setReviews((prev) => [...prev.filter((r) => !(r.week_start === week_start && r.role === role)), data as CareerReview]);
-    setSaving(false);
-  }
+  const latestMainReview = [...reviews].reverse().find((r) => r.role === "main");
+  const latestExpandedReview = [...reviews].reverse().find((r) => r.role === "expanded");
 
   const matrixData = useMemo(() => {
     const byRole = (role: "main" | "expanded") => {
@@ -84,6 +68,8 @@ export default function WorkPage() {
     };
     return [byRole("main"), byRole("expanded")].filter((d): d is NonNullable<typeof d> => d != null);
   }, [reviews]);
+
+  const signals = useMemo(() => computeCareerSignals(reviews), [reviews]);
 
   if (loading) return <div className="flex h-64 items-center justify-center text-muted-foreground">Loading…</div>;
 
@@ -115,14 +101,33 @@ export default function WorkPage() {
                     </div>
                     <div>
                       <CardTitle>Career Energy vs Career Drain</CardTitle>
-                      <CardDescription>Based on your weekly role reflections — ambition isn't automatically framed as bad.</CardDescription>
+                      <CardDescription>
+                        This week's snapshot — fill it in from your Daily Check-In. This is the analysis, not the form.
+                      </CardDescription>
                     </div>
                   </CardHeader>
                   <CardContent>
                     <div className="grid gap-6 sm:grid-cols-2">
-                      <RoleReview title="Main Role" subtitle="Brand Acceleration / Livestreaming Strategy" review={mainReview} setReview={setMainReview} onSave={() => saveReview("main")} saving={saving} />
-                      <RoleReview title="Expanded Role" subtitle="Data / Analytics" review={expandedReview} setReview={setExpandedReview} onSave={() => saveReview("expanded")} saving={saving} />
+                      <RoleRecap title="Main Role" subtitle="Brand Acceleration / Livestreaming Strategy" review={latestMainReview} />
+                      <RoleRecap title="Expanded Role" subtitle="Data / Analytics" review={latestExpandedReview} />
                     </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex-row items-center gap-3 space-y-0">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-career-light text-career">
+                      <Activity className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <CardTitle>Career Signal</CardTitle>
+                      <CardDescription>Last 4 weekly snapshots — is one role wearing you down, or are you okay overall?</CardDescription>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="flex flex-col gap-3">
+                    <SignalRow signal={signals.main} />
+                    <SignalRow signal={signals.expanded} />
+                    <SignalRow signal={signals.combined} emphasized />
                   </CardContent>
                 </Card>
 
@@ -161,6 +166,11 @@ export default function WorkPage() {
             label: "Meetings (MoM)",
             content: <MomSection />,
           },
+          {
+            key: "calendar",
+            label: "Calendar",
+            content: <CareerCalendar />,
+          },
         ]}
       />
     </div>
@@ -176,21 +186,29 @@ function StatCard({ label, value }: { label: string; value: string }) {
   );
 }
 
-function RoleReview({
-  title,
-  subtitle,
-  review,
-  setReview,
-  onSave,
-  saving,
-}: {
-  title: string;
-  subtitle: string;
-  review: Partial<CareerReview>;
-  setReview: (v: Partial<CareerReview>) => void;
-  onSave: () => void;
-  saving: boolean;
-}) {
+function SignalRow({ signal, emphasized }: { signal: CareerSignal; emphasized?: boolean }) {
+  const toneStyles: Record<CareerSignal["tone"], string> = {
+    good: "bg-health-light text-health",
+    watch: "bg-warn-light text-warn",
+    strain: "bg-critical-light text-critical",
+    unknown: "bg-muted text-muted-foreground",
+  };
+  return (
+    <div className={`rounded-2xl p-4 ${emphasized ? "border-2 border-career/30" : "bg-muted"}`}>
+      <div className="mb-1.5 flex items-center justify-between">
+        <p className="font-display text-sm font-semibold">{signal.label}</p>
+        {signal.avgStress != null && signal.avgEnjoyment != null && (
+          <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${toneStyles[signal.tone]}`}>
+            Stress {round1(signal.avgStress)}/10 · Enjoyment {round1(signal.avgEnjoyment)}/10
+          </span>
+        )}
+      </div>
+      <p className="text-sm text-muted-foreground">{signal.text}</p>
+    </div>
+  );
+}
+
+function RoleRecap({ title, subtitle, review }: { title: string; subtitle: string; review: CareerReview | undefined }) {
   const fields: { key: keyof CareerReview; label: string }[] = [
     { key: "workload", label: "Workload" },
     { key: "enjoyment", label: "Enjoyment" },
@@ -202,17 +220,21 @@ function RoleReview({
     <div className="rounded-2xl bg-muted p-4">
       <p className="font-display text-sm font-semibold">{title}</p>
       <p className="mb-3 text-xs text-muted-foreground">{subtitle}</p>
-      <div className="flex flex-col gap-3">
-        {fields.map((f) => (
-          <div key={f.key}>
-            <label className="mb-0.5 block text-xs font-medium text-muted-foreground">{f.label}</label>
-            <Slider value={(review[f.key] as number) ?? null} onChange={(v) => setReview({ ...review, [f.key]: v })} accentClassName="accent-career" />
-          </div>
-        ))}
-        <Button size="sm" onClick={onSave} disabled={saving} variant="soft">
-          Save this week
-        </Button>
-      </div>
+      {!review ? (
+        <p className="text-xs text-muted-foreground">No snapshot yet this week — fill it in from Daily Check-In.</p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {fields.map((f) => {
+            const val = review[f.key] as number | null;
+            return (
+              <div key={f.key} className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">{f.label}</span>
+                <span className="font-medium">{val ?? "—"}/10</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
