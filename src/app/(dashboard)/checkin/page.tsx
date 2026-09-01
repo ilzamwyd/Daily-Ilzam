@@ -226,7 +226,7 @@ export default function CheckInPage() {
           <Textarea rows={2} value={log.work_pressure_note ?? ""} onChange={(e) => update("work_pressure_note", e.target.value)} />
         </div>
         <div className="border-t border-border pt-4">
-          <label className="mb-1.5 block text-sm font-medium">Career Energy vs Career Drain — this week's snapshot</label>
+          <label className="mb-1.5 block text-sm font-medium">Career Energy vs Career Drain — today's rating</label>
           <WeeklyRoleReviewInput />
         </div>
       </SectionCard>

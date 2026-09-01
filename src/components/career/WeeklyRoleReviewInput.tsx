@@ -45,7 +45,7 @@ function RoleCard({
         ))}
         <Button size="sm" onClick={onSave} disabled={saving} variant="soft" className="gap-1.5">
           {saved && <Check className="h-3.5 w-3.5" />}
-          {saving ? "Saving…" : saved ? "Saved for this week" : "Save this week"}
+          {saving ? "Saving…" : saved ? "Saved for today" : "Save today"}
         </Button>
       </div>
     </div>
@@ -61,7 +61,7 @@ export function WeeklyRoleReviewInput() {
   const [savedRole, setSavedRole] = useState<"main" | "expanded" | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const weekStart = formatDateISO(startOfWeek());
+  const today = formatDateISO(new Date());
 
   useEffect(() => {
     (async () => {
@@ -74,7 +74,7 @@ export function WeeklyRoleReviewInput() {
         .from("career_reviews")
         .select("*")
         .eq("user_id", user.id)
-        .eq("week_start", weekStart);
+        .eq("date", today);
       const rows = (data as CareerReview[]) ?? [];
       const main = rows.find((r) => r.role === "main");
       const expanded = rows.find((r) => r.role === "expanded");
@@ -92,7 +92,7 @@ export function WeeklyRoleReviewInput() {
     const payload = role === "main" ? mainReview : expandedReview;
     const { data } = await supabase
       .from("career_reviews")
-      .upsert({ ...payload, role, week_start: weekStart, user_id: userId }, { onConflict: "user_id,week_start,role" })
+      .upsert({ ...payload, role, date: today, week_start: formatDateISO(startOfWeek(new Date())), user_id: userId }, { onConflict: "user_id,date,role" })
       .select()
       .single();
     if (data) {
@@ -108,7 +108,7 @@ export function WeeklyRoleReviewInput() {
   return (
     <div>
       <p className="mb-3 text-xs text-muted-foreground">
-        This week's snapshot ({weekStart}) — fill it in any day this week, it just updates the same week. Full analysis shows up on the Work page.
+        Today's snapshot ({today}) — one quick rating per role, per day. The Work page averages your days into a weekly recap automatically.
       </p>
       <div className="grid gap-3 sm:grid-cols-2">
         <RoleCard

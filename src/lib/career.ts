@@ -1,4 +1,5 @@
 import { CareerReview } from "./types";
+import { startOfWeek, formatDateISO } from "./utils";
 
 export interface CareerSignal {
   label: string;
@@ -12,6 +13,34 @@ function average(nums: (number | null | undefined)[]): number | null {
   const valid = nums.filter((n): n is number => typeof n === "number");
   if (!valid.length) return null;
   return valid.reduce((a, b) => a + b, 0) / valid.length;
+}
+
+// Reviews are now logged DAILY (from Daily Check-In). Everything downstream
+// (the matrix, the signals, "this week's snapshot") works off a WEEKLY view,
+// so this averages each day's entries into one row per role per week.
+export function aggregateDailyToWeekly(reviews: CareerReview[]): CareerReview[] {
+  const groups = new Map<string, CareerReview[]>();
+  for (const r of reviews) {
+    const basis = r.date ?? r.week_start;
+    const weekStart = formatDateISO(startOfWeek(new Date(basis)));
+    const key = `${r.role}:${weekStart}`;
+    groups.set(key, [...(groups.get(key) ?? []), r]);
+  }
+  const result: CareerReview[] = [];
+  for (const [key, rows] of groups) {
+    const [role, weekStart] = key.split(":");
+    result.push({
+      role: role as "main" | "expanded",
+      week_start: weekStart,
+      date: weekStart,
+      workload: average(rows.map((r) => r.workload)),
+      enjoyment: average(rows.map((r) => r.enjoyment)),
+      learning: average(rows.map((r) => r.learning)),
+      impact: average(rows.map((r) => r.impact)),
+      stress: average(rows.map((r) => r.stress)),
+    });
+  }
+  return result.sort((a, b) => (a.week_start < b.week_start ? -1 : 1));
 }
 
 function classify(avgStress: number | null, avgEnjoyment: number | null): { tone: CareerSignal["tone"]; text: string } {
@@ -31,7 +60,8 @@ function classify(avgStress: number | null, avgEnjoyment: number | null): { tone
 }
 
 // Looks at the most recent N weekly snapshots (default 4) to smooth out any one bad week.
-export function computeCareerSignals(reviews: CareerReview[], recentWeeks = 4) {
+export function computeCareerSignals(rawReviews: CareerReview[], recentWeeks = 4) {
+  const reviews = aggregateDailyToWeekly(rawReviews);
   const byRole = (role: "main" | "expanded") =>
     reviews
       .filter((r) => r.role === role)

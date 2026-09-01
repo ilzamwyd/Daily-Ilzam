@@ -11,13 +11,14 @@ import { MICROCOPY } from "@/lib/constants";
 import { Tabs } from "@/components/ui/tabs";
 import { MomSection } from "@/components/career/MomSection";
 import { CareerCalendar } from "@/components/career/CareerCalendar";
-import { computeCareerSignals, CareerSignal } from "@/lib/career";
+import { computeCareerSignals, aggregateDailyToWeekly, CareerSignal } from "@/lib/career";
 import { Activity } from "lucide-react";
 
 export default function WorkPage() {
   const supabase = createClient();
   const [logs, setLogs] = useState<DailyLog[]>([]);
   const [reviews, setReviews] = useState<CareerReview[]>([]);
+  const [taskCounts, setTaskCounts] = useState<{ category: string; open: number; total: number }[]>([]);
   const [loading, setLoading] = useState(true);
 
   async function load() {
@@ -25,12 +26,20 @@ export default function WorkPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     const since = formatDateISO(daysAgo(60));
-    const [{ data: logData }, { data: reviewData }] = await Promise.all([
+    const [{ data: logData }, { data: reviewData }, { data: taskData }] = await Promise.all([
       supabase.from("daily_logs").select("*").eq("user_id", user.id).gte("date", since).order("date", { ascending: true }),
       supabase.from("career_reviews").select("*").eq("user_id", user.id).order("week_start", { ascending: true }),
+      supabase.from("action_items").select("category, status").eq("user_id", user.id).in("category", ["Main Role", "Expanded Role"]),
     ]);
     setLogs((logData as DailyLog[]) ?? []);
     setReviews((reviewData as CareerReview[]) ?? []);
+    const rows = (taskData as { category: string; status: string }[]) ?? [];
+    const counts = ["Main Role", "Expanded Role"].map((cat) => ({
+      category: cat,
+      open: rows.filter((r) => r.category === cat && r.status === "todo").length,
+      total: rows.filter((r) => r.category === cat).length,
+    }));
+    setTaskCounts(counts);
     setLoading(false);
   }
 
@@ -54,12 +63,13 @@ export default function WorkPage() {
     return Math.round((withRecoveryNextDay.length / intenseDays.length) * 100);
   }, [logs]);
 
-  const latestMainReview = [...reviews].reverse().find((r) => r.role === "main");
-  const latestExpandedReview = [...reviews].reverse().find((r) => r.role === "expanded");
+  const weeklyReviews = useMemo(() => aggregateDailyToWeekly(reviews), [reviews]);
+  const latestMainReview = [...weeklyReviews].reverse().find((r) => r.role === "main");
+  const latestExpandedReview = [...weeklyReviews].reverse().find((r) => r.role === "expanded");
 
   const matrixData = useMemo(() => {
     const byRole = (role: "main" | "expanded") => {
-      const rows = reviews.filter((r) => r.role === role);
+      const rows = weeklyReviews.filter((r) => r.role === role);
       if (!rows.length) return null;
       const enjoyment = average(rows.map((r) => r.enjoyment));
       const learning = average(rows.map((r) => r.learning));
@@ -67,7 +77,7 @@ export default function WorkPage() {
       return { x: round1(enjoyment), y: round1(learning), z: rows.length, name: role === "main" ? "Main Role" : "Expanded Role" };
     };
     return [byRole("main"), byRole("expanded")].filter((d): d is NonNullable<typeof d> => d != null);
-  }, [reviews]);
+  }, [weeklyReviews]);
 
   const signals = useMemo(() => computeCareerSignals(reviews), [reviews]);
 
@@ -93,6 +103,39 @@ export default function WorkPage() {
                   <StatCard label="Worked after 9 PM" value={`${afterNine}/7 days`} />
                   <StatCard label="Recovery after intense days" value={recoveryAfterIntense != null ? `${recoveryAfterIntense}%` : "—"} />
                 </div>
+
+                {(taskCounts[0]?.total > 0 || taskCounts[1]?.total > 0) && (
+                  <Card>
+                    <CardHeader className="flex-row items-center gap-3 space-y-0">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-career-light text-career">
+                        <Briefcase className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <CardTitle>Task Load by Role</CardTitle>
+                        <CardDescription>Based on your To-Do items tagged by category.</CardDescription>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 gap-3">
+                        {taskCounts.map((t) => (
+                          <div key={t.category} className="rounded-2xl bg-muted p-4">
+                            <p className="text-sm font-semibold">{t.category}</p>
+                            <p className="mt-1 font-display text-2xl font-bold">
+                              {t.open} <span className="text-sm font-medium text-muted-foreground">open / {t.total} total</span>
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                      {taskCounts[0]?.open !== taskCounts[1]?.open && (
+                        <p className="mt-3 text-sm text-muted-foreground">
+                          {taskCounts[0].open > taskCounts[1].open
+                            ? `Main Role currently has more open tasks (${taskCounts[0].open} vs ${taskCounts[1].open}) — that's where the load is stacking up right now.`
+                            : `Expanded Role currently has more open tasks (${taskCounts[1].open} vs ${taskCounts[0].open}) — that's where the load is stacking up right now.`}
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
 
                 <Card>
                   <CardHeader className="flex-row items-center gap-3 space-y-0">

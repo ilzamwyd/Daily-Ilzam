@@ -12,8 +12,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { WeightChart } from "@/components/charts/WeightChart";
 import { StepsChart } from "@/components/charts/StepsChart";
+import { MindTrendChart } from "@/components/charts/MindTrendChart";
 import { MICROCOPY } from "@/lib/constants";
-import { ArrowRight, Moon, Smile, Zap, Footprints, BatteryCharging } from "lucide-react";
+import { ArrowRight, Moon, Smile, Zap, Footprints, BatteryCharging, Brain, Wallet } from "lucide-react";
+import { getTransactionsForMonth, getBudgetsForMonth } from "@/lib/data";
+import { monthStr, summarizeByCode, formatIDR } from "@/lib/finance";
 
 export default async function OverviewPage() {
   const supabase = createClient();
@@ -38,6 +41,33 @@ export default async function OverviewPage() {
 
   const balance = computeWeeklyBalanceScore(last7, targets, englishSessionCount ?? undefined);
   const insights = generateInsights(logs);
+
+  const avgMainWorkload = average(last7.map((l) => l.main_role_workload));
+  const avgDataWorkload = average(last7.map((l) => l.data_role_workload));
+  const afterNine = last7.filter((l) => l.worked_after_9).length;
+  const intenseDays = logs.filter((l) => (l.main_role_workload ?? 0) >= 8 || (l.data_role_workload ?? 0) >= 8);
+  const recoveryAfterIntense =
+    intenseDays.length === 0
+      ? null
+      : Math.round(
+          (intenseDays.filter((l) => {
+            const idx = logs.findIndex((x) => x.date === l.date);
+            return logs[idx + 1]?.recovery;
+          }).length /
+            intenseDays.length) *
+            100
+        );
+
+  const currentMonth = monthStr();
+  const [monthTransactions, monthBudgets] = await Promise.all([
+    getTransactionsForMonth(supabase, user.id, currentMonth),
+    getBudgetsForMonth(supabase, user.id, currentMonth),
+  ]);
+  const monthIncome = monthTransactions.filter((t) => t.type === "income").reduce((s, t) => s + Number(t.amount), 0);
+  const monthExpense = monthTransactions.filter((t) => t.type === "expense").reduce((s, t) => s + Number(t.amount), 0);
+  const expenseSummary = summarizeByCode(monthTransactions, monthBudgets, currentMonth, "expense");
+  const totalBudgeted = expenseSummary.reduce((s, c) => s + c.budgeted, 0);
+  const budgetUsedPct = totalBudgeted > 0 ? Math.round((monthExpense / totalBudgeted) * 100) : null;
 
   const avgSteps = average(last7.map((l) => l.steps));
   const avgSleep = average(last7.map((l) => l.sleep_hours));
@@ -94,6 +124,63 @@ export default async function OverviewPage() {
         </div>
       </div>
 
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card>
+          <CardHeader className="flex-row items-center gap-3 space-y-0">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-career-light text-career">
+              <Zap className="h-5 w-5" />
+            </div>
+            <CardTitle>Workload &amp; Stress Management</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <StatRow label="Main Role Workload" value={avgMainWorkload ? `${round1(avgMainWorkload)}/10` : "—"} />
+            <StatRow label="Expanded Role Workload" value={avgDataWorkload ? `${round1(avgDataWorkload)}/10` : "—"} />
+            <StatRow label="Worked after 9 PM" value={`${afterNine}/7 days`} />
+            <StatRow label="Recovered after intense days" value={recoveryAfterIntense != null ? `${recoveryAfterIntense}%` : "—"} />
+            <Link href="/career/work" className="mt-1 text-xs font-medium text-career hover:underline">
+              See full Career Signal →
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex-row items-center gap-3 space-y-0">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-mental-light text-mental">
+              <Brain className="h-5 w-5" />
+            </div>
+            <CardTitle>Mood, Stress &amp; Energy</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <MindTrendChart logs={last7} />
+            <Link href="/health/mind" className="mt-2 inline-block text-xs font-medium text-mental hover:underline">
+              See patterns on Mind →
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex-row items-center gap-3 space-y-0">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-finance-light text-finance">
+              <Wallet className="h-5 w-5" />
+            </div>
+            <CardTitle>Finance vs Budgeting</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <StatRow label="Income (this month)" value={formatIDR(monthIncome)} />
+            <StatRow label="Expense (this month)" value={formatIDR(monthExpense)} />
+            <StatRow
+              label="Remaining"
+              value={formatIDR(monthIncome - monthExpense)}
+              valueClass={monthIncome - monthExpense >= 0 ? "text-finance" : "text-critical"}
+            />
+            {budgetUsedPct != null && <StatRow label="Budget used" value={`${budgetUsedPct}%`} />}
+            <Link href="/career/finance" className="mt-1 text-xs font-medium text-finance hover:underline">
+              See full Finance →
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <KpiCard label="Current Weight" value={currentWeight != null ? `${currentWeight} kg` : "—"} sub={weightChange != null ? `${weightChange > 0 ? "+" : ""}${weightChange} kg vs start` : undefined} icon="Scale" colorClass="bg-health-light text-health" />
         <KpiCard label="Gym Sessions" value={`${gymCount}/${targets.gym_weekly_target}`} sub="this week" icon="Dumbbell" colorClass="bg-fitness-light text-fitness" />
@@ -142,6 +229,15 @@ export default async function OverviewPage() {
           <InsightsPanel insights={insights} />
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function StatRow({ label, value, valueClass }: { label: string; value: string; valueClass?: string }) {
+  return (
+    <div className="flex items-center justify-between text-sm">
+      <span className="text-muted-foreground">{label}</span>
+      <span className={`font-medium ${valueClass ?? ""}`}>{value}</span>
     </div>
   );
 }

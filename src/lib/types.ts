@@ -190,6 +190,7 @@ export interface CareerReview {
   id?: string;
   user_id?: string;
   week_start: string;
+  date: string;
   role: "main" | "expanded";
   workload: number | null;
   enjoyment: number | null;

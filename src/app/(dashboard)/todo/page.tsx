@@ -56,9 +56,12 @@ export default function TodoPage() {
     [items]
   );
 
+  const [error, setError] = useState<string | null>(null);
+
   async function addTodo() {
     if (!userId || !newItem.description.trim()) return;
-    await supabase.from("action_items").insert({
+    setError(null);
+    const { error: err } = await supabase.from("action_items").insert({
       user_id: userId,
       description: newItem.description.trim(),
       assignee: newItem.assignee.trim() || null,
@@ -66,6 +69,10 @@ export default function TodoPage() {
       category: newItem.category.trim() || null,
       status: "todo",
     });
+    if (err) {
+      setError(err.message);
+      return;
+    }
     setNewItem(emptyDraft());
     await load(userId);
   }
@@ -150,6 +157,7 @@ export default function TodoPage() {
             <Plus className="h-4 w-4" />
           </Button>
         </div>
+        {error && <p className="text-xs text-critical">{error}</p>}
       </Card>
 
       {categories.length > 0 && (
