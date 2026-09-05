@@ -284,3 +284,18 @@ export function summarizeSubcategoriesForPeriod(
     })
     .filter((s) => s.budgeted > 0 || s.spent > 0);
 }
+
+export interface SourceRemaining {
+  source: string;
+  income: number;
+  expense: number;
+  remaining: number;
+}
+
+export function remainingBySource(transactions: Transaction[]): SourceRemaining[] {
+  return BANK_SOURCES.map((source) => {
+    const income = transactions.filter((t) => t.source === source && t.type === "income").reduce((s, t) => s + Number(t.amount), 0);
+    const expense = transactions.filter((t) => t.source === source && t.type === "expense").reduce((s, t) => s + Number(t.amount), 0);
+    return { source, income, expense, remaining: income - expense };
+  }).filter((s) => s.income > 0 || s.expense > 0);
+}

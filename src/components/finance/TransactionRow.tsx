@@ -81,7 +81,7 @@ export function TransactionRow({ transaction, onChanged }: { transaction: Transa
         <Input
           inputMode="numeric"
           className="flex-1"
-          value={draft.amount}
+          value={draft.amount ? Number(draft.amount).toLocaleString("id-ID") : ""}
           onChange={(e) => setDraft((d) => ({ ...d, amount: e.target.value.replace(/[^0-9]/g, "") }))}
         />
       </div>

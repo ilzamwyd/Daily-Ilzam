@@ -95,8 +95,8 @@ export function QuickAddTransaction({ onSaved }: { onSaved?: () => void }) {
           inputMode="numeric"
           autoFocus
           placeholder="0"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
+          value={amount ? Number(amount).toLocaleString("id-ID") : ""}
+          onChange={(e) => setAmount(e.target.value.replace(/[^0-9]/g, ""))}
           className="text-2xl font-semibold"
         />
       </div>

@@ -10,7 +10,11 @@ import {
   daysRemainingInRange,
   needsWantsSave,
   needsWantsSaveFromBudget,
+  remainingBySource,
   formatIDR,
+  EXPENSE_CODES,
+  BANK_SOURCES,
+  subcategoriesFor,
 } from "@/lib/finance";
 import { Transaction, MonthlyBudget } from "@/lib/types";
 import { KpiCard } from "@/components/dashboard/KpiCard";
@@ -21,6 +25,7 @@ import { MonthlySalaryInput } from "@/components/finance/MonthlySalaryInput";
 import { PeriodPicker, Period, resolvePeriod } from "@/components/finance/PeriodPicker";
 import { BudgetVsActualChart } from "@/components/finance/BudgetVsActualChart";
 import { Segmented } from "@/components/ui/segmented";
+import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -75,6 +80,11 @@ export default function FinancePage() {
   const [period, setPeriod] = useState<Period>(defaultPeriod());
   const [compareOn, setCompareOn] = useState(false);
   const [expandedCode, setExpandedCode] = useState<string | null>(null);
+  const [showRemainingBySource, setShowRemainingBySource] = useState(false);
+  const [txFilterDate, setTxFilterDate] = useState("");
+  const [txFilterCode, setTxFilterCode] = useState<string>("All");
+  const [txFilterCategory, setTxFilterCategory] = useState<string>("All");
+  const [txFilterSource, setTxFilterSource] = useState<string>("All");
   const [salary, setSalary] = useState(0);
   const [nwsMode, setNwsMode] = useState<"real" | "plan">("real");
   const [comparePeriod, setComparePeriod] = useState<Period>(() => {
@@ -90,6 +100,14 @@ export default function FinancePage() {
   const b = usePeriodData(compareOn ? comparePeriod : period);
 
   const remaining = a.totalIncome - a.totalExpense;
+
+  const filteredTransactions = a.transactions.filter((t) => {
+    if (txFilterDate && t.date !== txFilterDate) return false;
+    if (txFilterCode !== "All" && t.code !== txFilterCode) return false;
+    if (txFilterCategory !== "All" && t.category !== txFilterCategory) return false;
+    if (txFilterSource !== "All" && t.source !== txFilterSource) return false;
+    return true;
+  });
   const salaryMonth = period.mode === "month" ? `${period.month}-01` : `${a.start.slice(0, 7)}-01`;
   const incomeRef = salary || a.totalIncome;
   const nwsReal = needsWantsSave(a.transactions, incomeRef);
@@ -145,11 +163,36 @@ export default function FinancePage() {
         <KpiCard
           label="Remaining"
           value={formatIDR(remaining)}
-          sub={remaining >= 0 ? "You're in the green" : "Over this period"}
+          sub={remaining >= 0 ? "You're in the green — tap for breakdown" : "Over this period — tap for breakdown"}
           icon="Wallet"
           colorClass={remaining >= 0 ? "bg-finance-light text-finance" : "bg-critical-light text-critical"}
+          onClick={() => setShowRemainingBySource((v) => !v)}
         />
       </div>
+
+      {showRemainingBySource && (
+        <Card className="p-5">
+          <h2 className="font-display text-base font-semibold">Remaining by Source — {a.label}</h2>
+          <p className="mt-1 text-xs text-muted-foreground">Income minus expense logged against each account/cash this period.</p>
+          <div className="mt-4 flex flex-col divide-y divide-border">
+            {remainingBySource(a.transactions).length === 0 ? (
+              <p className="py-2 text-sm text-muted-foreground">No transactions logged this period yet.</p>
+            ) : (
+              remainingBySource(a.transactions).map((s) => (
+                <div key={s.source} className="flex items-center justify-between py-2.5 text-sm">
+                  <span className="font-medium">{s.source}</span>
+                  <div className="text-right">
+                    <p className={s.remaining >= 0 ? "font-semibold text-finance" : "font-semibold text-critical"}>{formatIDR(s.remaining)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatIDR(s.income)} in · {formatIDR(s.expense)} out
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </Card>
+      )}
 
       {compareOn && (
         <Card className="p-6">
@@ -277,13 +320,71 @@ export default function FinancePage() {
 
       {a.transactions.length > 0 && (
         <Card className="p-6">
-          <h2 className="font-display text-lg font-semibold">
-            Transactions — {a.label} <span className="text-sm font-normal text-muted-foreground">({a.transactions.length} total, scroll for more)</span>
-          </h2>
-          <div className="mt-4 flex max-h-[560px] flex-col divide-y divide-border overflow-y-auto pr-1">
-            {a.transactions.map((t) => (
-              <TransactionRow key={t.id} transaction={t} onChanged={a.reload} />
-            ))}
+          <h2 className="font-display text-lg font-semibold">Transactions — {a.label}</h2>
+
+          <div className="mt-4 flex flex-col gap-3 rounded-2xl bg-muted p-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <Input
+                type="date"
+                className="h-9 w-40"
+                value={txFilterDate}
+                onChange={(e) => setTxFilterDate(e.target.value)}
+              />
+              {(txFilterDate || txFilterCode !== "All" || txFilterCategory !== "All" || txFilterSource !== "All") && (
+                <button
+                  onClick={() => {
+                    setTxFilterDate("");
+                    setTxFilterCode("All");
+                    setTxFilterCategory("All");
+                    setTxFilterSource("All");
+                  }}
+                  className="text-xs font-medium text-muted-foreground underline hover:text-foreground"
+                >
+                  Clear filters
+                </button>
+              )}
+            </div>
+            <div>
+              <p className="mb-1 text-xs font-medium text-muted-foreground">Group</p>
+              <Segmented
+                options={["All", ...EXPENSE_CODES, "Income"]}
+                value={txFilterCode}
+                onChange={(v) => {
+                  setTxFilterCode(v);
+                  setTxFilterCategory("All");
+                }}
+                activeClassName="bg-finance text-white"
+              />
+            </div>
+            {txFilterCode !== "All" && (
+              <div>
+                <p className="mb-1 text-xs font-medium text-muted-foreground">Category</p>
+                <Segmented
+                  options={["All", ...subcategoriesFor(txFilterCode)]}
+                  value={txFilterCategory}
+                  onChange={setTxFilterCategory}
+                  activeClassName="bg-finance/80 text-white"
+                />
+              </div>
+            )}
+            <div>
+              <p className="mb-1 text-xs font-medium text-muted-foreground">Source</p>
+              <Segmented
+                options={["All", ...BANK_SOURCES]}
+                value={txFilterSource}
+                onChange={setTxFilterSource}
+                activeClassName="bg-finance text-white"
+              />
+            </div>
+          </div>
+
+          <p className="mt-3 text-sm font-normal text-muted-foreground">{filteredTransactions.length} of {a.transactions.length} shown — scroll for more</p>
+          <div className="mt-2 flex max-h-[560px] flex-col divide-y divide-border overflow-y-auto pr-1">
+            {filteredTransactions.length === 0 ? (
+              <p className="py-4 text-sm text-muted-foreground">No transactions match these filters.</p>
+            ) : (
+              filteredTransactions.map((t) => <TransactionRow key={t.id} transaction={t} onChanged={a.reload} />)
+            )}
           </div>
         </Card>
       )}

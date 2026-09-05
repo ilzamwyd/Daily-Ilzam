@@ -53,7 +53,7 @@ export function MonthlySalaryInput({ month, onChanged }: { month: string; onChan
           <Input
             inputMode="numeric"
             className="h-8 w-36"
-            value={amount}
+            value={amount ? Number(amount).toLocaleString("id-ID") : ""}
             onChange={(e) => setAmount(e.target.value.replace(/[^0-9]/g, ""))}
             autoFocus
           />
