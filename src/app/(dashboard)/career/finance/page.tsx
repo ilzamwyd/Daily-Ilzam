@@ -4,22 +4,27 @@ import { createClient } from "@/lib/supabase/client";
 import { getTransactionsForRange, getBudgetsForMonths } from "@/lib/data";
 import {
   summarizeByCodeForPeriod,
+  summarizeSubcategoriesForPeriod,
   prorateBudgetsForRange,
   monthKeysForRange,
   daysRemainingInRange,
   needsWantsSave,
+  needsWantsSaveFromBudget,
   formatIDR,
 } from "@/lib/finance";
 import { Transaction, MonthlyBudget } from "@/lib/types";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { QuickAddTransaction } from "@/components/finance/QuickAddTransaction";
+import { TransactionRow } from "@/components/finance/TransactionRow";
+import { MonthlySalaryInput } from "@/components/finance/MonthlySalaryInput";
 import { PeriodPicker, Period, resolvePeriod } from "@/components/finance/PeriodPicker";
 import { BudgetVsActualChart } from "@/components/finance/BudgetVsActualChart";
+import { Segmented } from "@/components/ui/segmented";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Settings2, FileBarChart, GitCompare } from "lucide-react";
+import { Settings2, FileBarChart, GitCompare, ChevronDown } from "lucide-react";
 import { formatDateISO } from "@/lib/utils";
 
 function defaultPeriod(): Period {
@@ -69,6 +74,9 @@ function usePeriodData(period: Period) {
 export default function FinancePage() {
   const [period, setPeriod] = useState<Period>(defaultPeriod());
   const [compareOn, setCompareOn] = useState(false);
+  const [expandedCode, setExpandedCode] = useState<string | null>(null);
+  const [salary, setSalary] = useState(0);
+  const [nwsMode, setNwsMode] = useState<"real" | "plan">("real");
   const [comparePeriod, setComparePeriod] = useState<Period>(() => {
     const p = defaultPeriod();
     const [y, m] = p.month.split("-").map(Number);
@@ -82,6 +90,11 @@ export default function FinancePage() {
   const b = usePeriodData(compareOn ? comparePeriod : period);
 
   const remaining = a.totalIncome - a.totalExpense;
+  const salaryMonth = period.mode === "month" ? `${period.month}-01` : `${a.start.slice(0, 7)}-01`;
+  const incomeRef = salary || a.totalIncome;
+  const nwsReal = needsWantsSave(a.transactions, incomeRef);
+  const nwsPlan = needsWantsSaveFromBudget(a.budgets, incomeRef);
+  const activeNws = nwsMode === "real" ? nwsReal : nwsPlan;
 
   if (a.loading) return <div className="flex h-64 items-center justify-center text-muted-foreground">Loading…</div>;
 
@@ -164,53 +177,98 @@ export default function FinancePage() {
             <BudgetVsActualChart data={a.expenseSummary} />
           </div>
           <div className="mt-5 flex flex-col gap-4">
-            {a.expenseSummary.map((c) => (
-              <div key={c.code}>
-                <div className="mb-1.5 flex items-baseline justify-between text-sm">
-                  <span className="font-medium">{c.code}</span>
-                  <span className="text-muted-foreground">
-                    {formatIDR(c.spent)} / {formatIDR(c.budgeted)}
-                  </span>
+            {a.expenseSummary.map((c) => {
+              const isOpen = expandedCode === c.code;
+              const subcats = isOpen ? summarizeSubcategoriesForPeriod(a.transactions, a.budgets, c.code) : [];
+              return (
+                <div key={c.code}>
+                  <button
+                    type="button"
+                    className="flex w-full items-baseline justify-between text-sm"
+                    onClick={() => setExpandedCode(isOpen ? null : c.code)}
+                  >
+                    <span className="flex items-center gap-1.5 font-medium">
+                      <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                      {c.code}
+                    </span>
+                    <span className="text-muted-foreground">
+                      {formatIDR(c.spent)} / {formatIDR(c.budgeted)}
+                    </span>
+                  </button>
+                  <div className="mb-1.5 mt-1.5 h-2.5 w-full overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${Math.min(100, c.pctUsed * 100)}%`,
+                        backgroundColor: c.pctUsed > 1 ? "#b91c1c" : c.pctUsed > 0.8 ? "#fb923c" : "#0891b2",
+                      }}
+                    />
+                  </div>
+                  {c.budgeted > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      {c.remaining >= 0
+                        ? `Sisa ${formatIDR(c.remaining)}${
+                            c.dailyRec > 0
+                              ? ` → ~${formatIDR(Math.round(c.dailyRec))}/day or ${formatIDR(Math.round(c.weeklyRec))}/week to stay on budget`
+                              : ""
+                          }`
+                        : `Over budget by ${formatIDR(Math.abs(c.remaining))}`}
+                    </p>
+                  )}
+                  {isOpen && (
+                    <div className="mt-3 flex flex-col gap-2 rounded-2xl bg-muted p-3">
+                      {subcats.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">No budget or spend logged for any subcategory here.</p>
+                      ) : (
+                        subcats.map((s) => (
+                          <div key={s.category} className="flex items-center justify-between text-xs">
+                            <span className="font-medium">{s.category}</span>
+                            <span className="text-muted-foreground">
+                              {formatIDR(s.spent)} / {formatIDR(s.budgeted)} ·{" "}
+                              <span className={s.remaining >= 0 ? "text-finance" : "text-critical"}>
+                                {s.remaining >= 0 ? `Sisa ${formatIDR(s.remaining)}` : `Over by ${formatIDR(Math.abs(s.remaining))}`}
+                              </span>
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
                 </div>
-                <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full rounded-full transition-all"
-                    style={{
-                      width: `${Math.min(100, c.pctUsed * 100)}%`,
-                      backgroundColor: c.pctUsed > 1 ? "#b91c1c" : c.pctUsed > 0.8 ? "#fb923c" : "#0891b2",
-                    }}
-                  />
-                </div>
-                {c.budgeted > 0 && (
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {c.remaining >= 0
-                      ? `Sisa ${formatIDR(c.remaining)}${
-                          c.dailyRec > 0
-                            ? ` → ~${formatIDR(Math.round(c.dailyRec))}/day or ${formatIDR(Math.round(c.weeklyRec))}/week to stay on budget`
-                            : ""
-                        }`
-                      : `Over budget by ${formatIDR(Math.abs(c.remaining))}`}
-                  </p>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </Card>
 
         <div className="flex flex-col gap-6">
           <Card className="p-6">
-            <h2 className="font-display text-lg font-semibold">Needs / Wants / Save</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Based on income received in {a.label}.</p>
-            <div className="mt-4 flex h-3 w-full overflow-hidden rounded-full bg-muted">
-              <div className="h-full bg-career" style={{ width: `${Math.max(0, a.nws.needsPct) * 100}%` }} />
-              <div className="h-full bg-social" style={{ width: `${Math.max(0, a.nws.wantsPct) * 100}%` }} />
-              <div className="h-full bg-finance" style={{ width: `${Math.max(0, a.nws.savePct) * 100}%` }} />
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="font-display text-lg font-semibold">Needs / Wants / Save</h2>
+              <Segmented options={["real", "plan"] as const} value={nwsMode} onChange={setNwsMode} activeClassName="bg-finance text-white border-finance" />
+            </div>
+            <p className="mb-3 text-sm text-muted-foreground">
+              {nwsMode === "real" ? `Actual spend in ${a.label}` : `Your budget plan for ${a.label}`}, against your monthly salary.
+            </p>
+
+            <div className="mb-4">
+              <MonthlySalaryInput month={salaryMonth} onChanged={setSalary} />
+            </div>
+
+            <div className="flex h-3 w-full overflow-hidden rounded-full bg-muted">
+              <div className="h-full bg-career" style={{ width: `${Math.max(0, activeNws.needsPct) * 100}%` }} />
+              <div className="h-full bg-social" style={{ width: `${Math.max(0, activeNws.wantsPct) * 100}%` }} />
+              <div className="h-full bg-finance" style={{ width: `${Math.max(0, activeNws.savePct) * 100}%` }} />
             </div>
             <div className="mt-4 flex flex-col gap-2 text-sm">
-              <LegendRow color="bg-career" label="Needs" pct={a.nws.needsPct} amt={a.nws.needsAmt} />
-              <LegendRow color="bg-social" label="Wants" pct={a.nws.wantsPct} amt={a.nws.wantsAmt} />
-              <LegendRow color="bg-finance" label="Save" pct={a.nws.savePct} amt={a.nws.saveAmt} />
+              <LegendRow color="bg-career" label="Needs" pct={activeNws.needsPct} amt={activeNws.needsAmt} />
+              <LegendRow color="bg-social" label="Wants" pct={activeNws.wantsPct} amt={activeNws.wantsAmt} />
+              <LegendRow color="bg-finance" label="Save" pct={activeNws.savePct} amt={activeNws.saveAmt} />
             </div>
+            {salary === 0 && (
+              <p className="mt-3 text-xs text-muted-foreground">
+                No salary set for this month — using total income from transactions instead. Set your salary above for a cleaner Save calculation.
+              </p>
+            )}
           </Card>
 
           <QuickAddTransaction onSaved={a.reload} />
@@ -219,22 +277,12 @@ export default function FinancePage() {
 
       {a.transactions.length > 0 && (
         <Card className="p-6">
-          <h2 className="font-display text-lg font-semibold">Transactions — {a.label}</h2>
-          <div className="mt-4 flex flex-col divide-y divide-border">
-            {a.transactions.slice(0, 20).map((t) => (
-              <div key={t.id} className="flex items-center justify-between py-2.5 text-sm">
-                <div>
-                  <p className="font-medium">{t.category}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Input on {t.date} · {t.source}
-                    {t.note ? ` · ${t.note}` : ""}
-                  </p>
-                </div>
-                <p className={t.type === "income" ? "font-semibold text-finance" : "font-semibold"}>
-                  {t.type === "income" ? "+" : "-"}
-                  {formatIDR(Number(t.amount))}
-                </p>
-              </div>
+          <h2 className="font-display text-lg font-semibold">
+            Transactions — {a.label} <span className="text-sm font-normal text-muted-foreground">({a.transactions.length} total, scroll for more)</span>
+          </h2>
+          <div className="mt-4 flex max-h-[560px] flex-col divide-y divide-border overflow-y-auto pr-1">
+            {a.transactions.map((t) => (
+              <TransactionRow key={t.id} transaction={t} onChanged={a.reload} />
             ))}
           </div>
         </Card>

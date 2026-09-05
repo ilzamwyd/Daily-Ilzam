@@ -202,6 +202,13 @@ export interface CareerReview {
 
 export type TransactionType = "income" | "expense";
 
+export interface MonthlySalary {
+  id?: string;
+  user_id?: string;
+  month: string; // YYYY-MM-01
+  amount: number;
+}
+
 export interface Transaction {
   id?: string;
   user_id?: string;

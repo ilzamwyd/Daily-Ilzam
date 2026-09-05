@@ -119,7 +119,7 @@ export interface NeedsWantsSave {
   saveAmt: number;
 }
 
-export function needsWantsSave(transactions: Transaction[], totalIncome: number): NeedsWantsSave {
+export function needsWantsSave(transactions: Transaction[], incomeReference: number): NeedsWantsSave {
   let needsAmt = 0;
   let wantsAmt = 0;
   for (const t of transactions) {
@@ -127,8 +127,30 @@ export function needsWantsSave(transactions: Transaction[], totalIncome: number)
     if (classifyNeedsWants(t.category) === "needs") needsAmt += Number(t.amount);
     else wantsAmt += Number(t.amount);
   }
-  const saveAmt = totalIncome - needsAmt - wantsAmt;
-  const base = totalIncome > 0 ? totalIncome : 1;
+  const saveAmt = incomeReference - needsAmt - wantsAmt;
+  const base = incomeReference > 0 ? incomeReference : 1;
+  return {
+    needsAmt,
+    wantsAmt,
+    saveAmt,
+    needsPct: needsAmt / base,
+    wantsPct: wantsAmt / base,
+    savePct: saveAmt / base,
+  };
+}
+
+// Same shape, but classifies BUDGETED amounts (the plan) instead of actual spend —
+// lets you compare "what I planned" vs "what actually happened".
+export function needsWantsSaveFromBudget(budgets: MonthlyBudget[], incomeReference: number): NeedsWantsSave {
+  let needsAmt = 0;
+  let wantsAmt = 0;
+  for (const b of budgets) {
+    if (b.type !== "expense") continue;
+    if (classifyNeedsWants(b.category) === "needs") needsAmt += Number(b.budgeted_amount);
+    else wantsAmt += Number(b.budgeted_amount);
+  }
+  const saveAmt = incomeReference - needsAmt - wantsAmt;
+  const base = incomeReference > 0 ? incomeReference : 1;
   return {
     needsAmt,
     wantsAmt,
@@ -235,4 +257,30 @@ export function daysRemainingInRange(end: string): number {
   const endDate = new Date(end);
   const diff = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
   return Math.max(0, diff);
+}
+
+export interface SubcategorySpend {
+  category: string;
+  budgeted: number;
+  spent: number;
+  remaining: number;
+}
+
+export function summarizeSubcategoriesForPeriod(
+  transactions: Transaction[],
+  proratedBudgets: MonthlyBudget[],
+  code: string
+): SubcategorySpend[] {
+  const subcats = subcategoriesFor(code);
+  return subcats
+    .map((category) => {
+      const budgeted = proratedBudgets
+        .filter((b) => b.type === "expense" && b.code === code && b.category === category)
+        .reduce((s, b) => s + Number(b.budgeted_amount), 0);
+      const spent = transactions
+        .filter((t) => t.type === "expense" && t.code === code && t.category === category)
+        .reduce((s, t) => s + Number(t.amount), 0);
+      return { category, budgeted, spent, remaining: budgeted - spent };
+    })
+    .filter((s) => s.budgeted > 0 || s.spent > 0);
 }
