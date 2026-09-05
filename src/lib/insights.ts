@@ -116,3 +116,38 @@ export function generatePatterns(logs: DailyLog[]): PatternInsight[] {
 
   return patterns;
 }
+
+export interface DailyCalorieTotal {
+  date: string;
+  kcal: number;
+}
+
+/**
+ * Calorie data lives in food_log, not daily_logs, so this takes pre-aggregated
+ * daily totals rather than DailyLog[]. Only looks at days that actually have
+ * logged food, so a day with nothing logged isn't treated as "0 calories".
+ */
+export function generateCalorieInsights(dailyTotals: DailyCalorieTotal[], calorieMax: number | null): Insight[] {
+  if (!calorieMax) return [];
+  const recent = dailyTotals.filter((d) => d.kcal > 0).slice(-7);
+  if (recent.length < 3) return [];
+
+  const overDays = recent.filter((d) => d.kcal > calorieMax);
+  if (overDays.length >= 3) {
+    return [
+      {
+        category: "fix",
+        text: `Calories went over your ${calorieMax} kcal reference on ${overDays.length} of the last ${recent.length} logged days.`,
+      },
+    ];
+  }
+  if (overDays.length >= 1) {
+    return [
+      {
+        category: "watch",
+        text: `Calories went over your ${calorieMax} kcal reference on ${overDays.length} day${overDays.length === 1 ? "" : "s"} recently.`,
+      },
+    ];
+  }
+  return [{ category: "maintain", text: `Calories have stayed within your ${calorieMax} kcal reference recently.` }];
+}

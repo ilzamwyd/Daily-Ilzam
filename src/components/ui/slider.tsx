@@ -21,7 +21,8 @@ export function Slider({
   accentClassName = "accent-primary",
   labels,
 }: SliderProps) {
-  const display = value ?? Math.round((min + max) / 2);
+  const midpoint = Math.round((min + max) / 2);
+  const display = value ?? "—";
   return (
     <div className="w-full">
       <div className="mb-2 flex items-center justify-between">
@@ -30,7 +31,9 @@ export function Slider({
         ) : (
           <span />
         )}
-        <span className="font-display text-2xl font-semibold tabular-nums">{display}</span>
+        <span className={cn("font-display text-2xl font-semibold tabular-nums", value == null && "text-muted-foreground")}>
+          {display}
+        </span>
         {labels ? (
           <span className="text-xs text-muted-foreground">{labels[1]}</span>
         ) : (
@@ -42,10 +45,15 @@ export function Slider({
         min={min}
         max={max}
         step={step}
-        value={display}
+        value={value ?? midpoint}
         onChange={(e) => onChange(Number(e.target.value))}
-        className={cn("h-2 w-full cursor-pointer appearance-none rounded-full bg-muted", accentClassName)}
+        className={cn(
+          "h-2 w-full cursor-pointer appearance-none rounded-full",
+          value == null ? "bg-muted/50 opacity-60" : "bg-muted",
+          accentClassName
+        )}
       />
+      {value == null && <p className="mt-1 text-[11px] text-muted-foreground">Drag to set a value — not saved until you do.</p>}
     </div>
   );
 }

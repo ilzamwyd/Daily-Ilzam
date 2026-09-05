@@ -105,15 +105,31 @@ export default async function FitPage() {
             <GymWeekChart logs={logs} />
             {recentExercises && recentExercises.length > 0 && (
               <div className="mt-4 flex flex-col divide-y divide-border">
-                {recentExercises.map((ex) => (
-                  <div key={ex.id} className="flex items-center justify-between py-2 text-sm">
-                    <span>{ex.exercise_name}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {ex.date}
-                      {ex.duration_minutes ? ` · ${ex.duration_minutes} min` : ""}
-                    </span>
-                  </div>
-                ))}
+                {Object.values(
+                  (recentExercises as { exercise_name: string; date: string; duration_minutes: number | null }[]).reduce(
+                    (acc, ex) => {
+                      const key = ex.exercise_name;
+                      if (!acc[key]) acc[key] = { name: key, count: 0, totalMinutes: 0, lastDate: ex.date };
+                      acc[key].count += 1;
+                      acc[key].totalMinutes += ex.duration_minutes ?? 0;
+                      if (ex.date > acc[key].lastDate) acc[key].lastDate = ex.date;
+                      return acc;
+                    },
+                    {} as Record<string, { name: string; count: number; totalMinutes: number; lastDate: string }>
+                  )
+                )
+                  .sort((a, b) => (a.lastDate < b.lastDate ? 1 : -1))
+                  .map((ex) => (
+                    <div key={ex.name} className="flex items-center justify-between py-2 text-sm">
+                      <span>
+                        {ex.name} {ex.count > 1 && <span className="text-xs text-muted-foreground">×{ex.count}</span>}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        Last {ex.lastDate}
+                        {ex.totalMinutes > 0 ? ` · ${ex.totalMinutes} min total` : ""}
+                      </span>
+                    </div>
+                  ))}
               </div>
             )}
           </CardContent>

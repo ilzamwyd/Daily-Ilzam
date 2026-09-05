@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { DailyLog, CareerReview } from "@/lib/types";
 import { average, formatDateISO, daysAgo, round1 } from "@/lib/utils";
-import { ScatterChart, Scatter, XAxis, YAxis, ZAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { ScatterChart, Scatter, XAxis, YAxis, ZAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from "recharts";
 import { Briefcase, TrendingUp } from "lucide-react";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { MICROCOPY } from "@/lib/constants";
@@ -188,16 +188,37 @@ export default function WorkPage() {
                     {matrixData.length === 0 ? (
                       <EmptyState message={MICROCOPY.emptyChart} />
                     ) : (
-                      <ResponsiveContainer width="100%" height={280}>
-                        <ScatterChart>
-                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                          <XAxis type="number" dataKey="x" domain={[1, 10]} name="Enjoyment" tick={{ fontSize: 11 }} label={{ value: "Energy / Enjoyment", position: "insideBottom", offset: -5, fontSize: 11 }} />
-                          <YAxis type="number" dataKey="y" domain={[1, 10]} name="Learning" tick={{ fontSize: 11 }} label={{ value: "Growth / Learning", angle: -90, position: "insideLeft", fontSize: 11 }} />
-                          <ZAxis type="number" dataKey="z" range={[200, 500]} />
-                          <Tooltip cursor={{ strokeDasharray: "3 3" }} contentStyle={{ borderRadius: 16, border: "1px solid hsl(var(--border))" }} formatter={(v: number, n: string) => [v, n]} labelFormatter={() => ""} />
-                          <Scatter data={matrixData} fill="#3b82f6" />
-                        </ScatterChart>
-                      </ResponsiveContainer>
+                      <>
+                        <ResponsiveContainer width="100%" height={280}>
+                          <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                            <XAxis type="number" dataKey="x" domain={[1, 10]} name="Enjoyment" tick={{ fontSize: 11 }} label={{ value: "Energy / Enjoyment", position: "insideBottom", offset: -5, fontSize: 11 }} />
+                            <YAxis type="number" dataKey="y" domain={[1, 10]} name="Learning" tick={{ fontSize: 11 }} label={{ value: "Growth / Learning", angle: -90, position: "insideLeft", fontSize: 11 }} />
+                            <ZAxis type="number" dataKey="z" range={[250, 550]} />
+                            <Tooltip cursor={{ strokeDasharray: "3 3" }} contentStyle={{ borderRadius: 16, border: "1px solid hsl(var(--border))" }} formatter={(v: number, n: string) => [v, n]} labelFormatter={() => ""} />
+                            <Legend wrapperStyle={{ fontSize: 12 }} />
+                            <Scatter name="Main Role" data={matrixData.filter((d) => d.name === "Main Role")} fill="#3b82f6" />
+                            <Scatter name="Expanded Role" data={matrixData.filter((d) => d.name === "Expanded Role")} fill="#a855f7" />
+                          </ScatterChart>
+                        </ResponsiveContainer>
+
+                        <div className="mt-4 rounded-2xl bg-muted p-4 text-sm">
+                          <p className="mb-2 font-medium">How to read this</p>
+                          <p className="mb-3 text-xs text-muted-foreground">
+                            Right = more enjoyable/energizing. Up = more learning/growth. The dot size shows how many weeks of data back it.
+                          </p>
+                          <div className="flex flex-col gap-2">
+                            {matrixData.map((d) => (
+                              <p key={d.name} className="text-xs">
+                                <span className="font-semibold" style={{ color: d.name === "Main Role" ? "#3b82f6" : "#a855f7" }}>
+                                  {d.name}
+                                </span>{" "}
+                                ({d.x}, {d.y}): {quadrantAdvice(d.x, d.y)}
+                              </p>
+                            ))}
+                          </div>
+                        </div>
+                      </>
                     )}
                   </CardContent>
                 </Card>
@@ -218,6 +239,15 @@ export default function WorkPage() {
       />
     </div>
   );
+}
+
+function quadrantAdvice(enjoyment: number, learning: number): string {
+  const highEnjoyment = enjoyment >= 6;
+  const highLearning = learning >= 6;
+  if (highEnjoyment && highLearning) return "Sweet spot — energizing and still growing you. Worth protecting this role's time.";
+  if (highEnjoyment && !highLearning) return "Comfortable, but you might be coasting — look for a stretch project to keep growing here.";
+  if (!highEnjoyment && highLearning) return "Growing fast but draining — the learning is real, just watch for burnout.";
+  return "Neither energizing nor growing right now — this is the one worth a harder look.";
 }
 
 function StatCard({ label, value }: { label: string; value: string }) {

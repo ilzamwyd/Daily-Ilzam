@@ -2,8 +2,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getRecentLogs, getTargets } from "@/lib/data";
 import { computeWeeklyBalanceScore } from "@/lib/score";
-import { generateInsights } from "@/lib/insights";
-import { average, formatDateISO, round1 } from "@/lib/utils";
+import { generateInsights, generateCalorieInsights } from "@/lib/insights";
+import { average, formatDateISO, round1, daysAgo } from "@/lib/utils";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import { WeeklyBalanceRing } from "@/components/dashboard/WeeklyBalanceRing";
 import { InsightsPanel } from "@/components/dashboard/InsightsPanel";
@@ -14,7 +14,7 @@ import { WeightChart } from "@/components/charts/WeightChart";
 import { StepsChart } from "@/components/charts/StepsChart";
 import { MindTrendChart } from "@/components/charts/MindTrendChart";
 import { MICROCOPY } from "@/lib/constants";
-import { ArrowRight, Moon, Smile, Zap, Footprints, BatteryCharging, Brain, Wallet } from "lucide-react";
+import { ArrowRight, Moon, Smile, Zap, Footprints, BatteryCharging, Brain, Wallet, Flame } from "lucide-react";
 import { getTransactionsForMonth, getBudgetsForMonth } from "@/lib/data";
 import { monthStr, summarizeByCode, formatIDR } from "@/lib/finance";
 
@@ -40,7 +40,26 @@ export default async function OverviewPage() {
     .gte("date", since7);
 
   const balance = computeWeeklyBalanceScore(last7, targets, englishSessionCount ?? undefined);
-  const insights = generateInsights(logs);
+
+  const since14 = formatDateISO(daysAgo(13));
+  const { data: foodRows } = await supabase
+    .from("food_log")
+    .select("date, total_calories")
+    .eq("user_id", user.id)
+    .gte("date", since14);
+  const calorieByDate = new Map<string, number>();
+  for (const row of (foodRows as { date: string; total_calories: number }[]) ?? []) {
+    calorieByDate.set(row.date, (calorieByDate.get(row.date) ?? 0) + Number(row.total_calories));
+  }
+  const dailyCalorieTotals = Array.from(calorieByDate.entries())
+    .map(([date, kcal]) => ({ date, kcal }))
+    .sort((a, b) => (a.date < b.date ? -1 : 1));
+  const todayCalories = calorieByDate.get(today) ?? 0;
+  const overLimitDays = targets.calorie_max
+    ? dailyCalorieTotals.filter((d) => d.kcal > (targets.calorie_max as number)).slice(-7).reverse()
+    : [];
+
+  const insights = [...generateInsights(logs), ...generateCalorieInsights(dailyCalorieTotals, targets.calorie_max)];
 
   const avgMainWorkload = average(last7.map((l) => l.main_role_workload));
   const avgDataWorkload = average(last7.map((l) => l.data_role_workload));
@@ -124,7 +143,7 @@ export default async function OverviewPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex-row items-center gap-3 space-y-0">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-career-light text-career">
@@ -176,6 +195,42 @@ export default async function OverviewPage() {
             {budgetUsedPct != null && <StatRow label="Budget used" value={`${budgetUsedPct}%`} />}
             <Link href="/career/finance" className="mt-1 text-xs font-medium text-finance hover:underline">
               See full Finance →
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex-row items-center gap-3 space-y-0">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-warn-light text-warn">
+              <Flame className="h-5 w-5" />
+            </div>
+            <CardTitle>Calories</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <StatRow
+              label="Today"
+              value={targets.calorie_max ? `${Math.round(todayCalories)} / ${targets.calorie_max} kcal` : `${Math.round(todayCalories)} kcal`}
+              valueClass={targets.calorie_max && todayCalories > targets.calorie_max ? "text-critical" : undefined}
+            />
+            {overLimitDays.length > 0 ? (
+              <div>
+                <p className="mb-1 text-xs font-medium text-muted-foreground">Went over limit on:</p>
+                <ul className="flex flex-col gap-1">
+                  {overLimitDays.map((d) => (
+                    <li key={d.date} className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">{d.date}</span>
+                      <span className="font-medium text-critical">{Math.round(d.kcal)} kcal</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                {targets.calorie_max ? "No days over your limit recently." : "Set a calorie reference in Settings to track this."}
+              </p>
+            )}
+            <Link href="/health/fit" className="mt-1 text-xs font-medium text-warn hover:underline">
+              See full Calorie Recap →
             </Link>
           </CardContent>
         </Card>
