@@ -33,6 +33,7 @@ function usePeriodData(period: Period) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [budgets, setBudgets] = useState<MonthlyBudget[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshTick, setRefreshTick] = useState(0);
   const { start, end, label } = resolvePeriod(period);
 
   useEffect(() => {
@@ -52,7 +53,9 @@ function usePeriodData(period: Period) {
       setLoading(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [start, end]);
+  }, [start, end, refreshTick]);
+
+  const reload = () => setRefreshTick((t) => t + 1);
 
   const totalIncome = transactions.filter((t) => t.type === "income").reduce((s, t) => s + Number(t.amount), 0);
   const totalExpense = transactions.filter((t) => t.type === "expense").reduce((s, t) => s + Number(t.amount), 0);
@@ -60,7 +63,7 @@ function usePeriodData(period: Period) {
   const expenseSummary = summarizeByCodeForPeriod(transactions, budgets, daysLeft, "expense");
   const nws = needsWantsSave(transactions, totalIncome);
 
-  return { transactions, budgets, loading, start, end, label, totalIncome, totalExpense, expenseSummary, nws };
+  return { transactions, budgets, loading, start, end, label, totalIncome, totalExpense, expenseSummary, nws, reload };
 }
 
 export default function FinancePage() {
@@ -210,7 +213,7 @@ export default function FinancePage() {
             </div>
           </Card>
 
-          <QuickAddTransaction />
+          <QuickAddTransaction onSaved={a.reload} />
         </div>
       </div>
 
