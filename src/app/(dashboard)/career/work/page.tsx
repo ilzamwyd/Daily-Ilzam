@@ -213,7 +213,7 @@ export default function WorkPage() {
                                 <span className="font-semibold" style={{ color: d.name === "Main Role" ? "#3b82f6" : "#a855f7" }}>
                                   {d.name}
                                 </span>{" "}
-                                ({d.x}, {d.y}): {quadrantAdvice(d.x, d.y)}
+                                ({d.x}, {d.y}): {quadrantAdvice(d.x as number, d.y as number)}
                               </p>
                             ))}
                           </div>
