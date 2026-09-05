@@ -24,7 +24,9 @@ import { TransactionRow } from "@/components/finance/TransactionRow";
 import { MonthlySalaryInput } from "@/components/finance/MonthlySalaryInput";
 import { PeriodPicker, Period, resolvePeriod } from "@/components/finance/PeriodPicker";
 import { BudgetVsActualChart } from "@/components/finance/BudgetVsActualChart";
+import { BudgetUsageRing } from "@/components/finance/BudgetUsageRing";
 import { Segmented } from "@/components/ui/segmented";
+import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -157,7 +159,7 @@ export default function FinancePage() {
         <EmptyState message="No budget set for this period yet. Set your category budgets first, then log expenses as you go." />
       )}
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <KpiCard label="Income" value={formatIDR(a.totalIncome)} icon="TrendingUp" colorClass="bg-finance-light text-finance" />
         <KpiCard label="Expense" value={formatIDR(a.totalExpense)} icon="TrendingDown" colorClass="bg-warn-light text-warn" />
         <KpiCard
@@ -167,6 +169,11 @@ export default function FinancePage() {
           icon="Wallet"
           colorClass={remaining >= 0 ? "bg-finance-light text-finance" : "bg-critical-light text-critical"}
           onClick={() => setShowRemainingBySource((v) => !v)}
+        />
+        <BudgetUsageRing
+          totalBudgeted={a.expenseSummary.reduce((s, c) => s + c.budgeted, 0)}
+          totalSpent={a.expenseSummary.reduce((s, c) => s + c.spent, 0)}
+          remaining={a.expenseSummary.reduce((s, c) => s + c.remaining, 0)}
         />
       </div>
 
@@ -322,60 +329,44 @@ export default function FinancePage() {
         <Card className="p-6">
           <h2 className="font-display text-lg font-semibold">Transactions — {a.label}</h2>
 
-          <div className="mt-4 flex flex-col gap-3 rounded-2xl bg-muted p-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <Input
-                type="date"
-                className="h-9 w-40"
-                value={txFilterDate}
-                onChange={(e) => setTxFilterDate(e.target.value)}
-              />
-              {(txFilterDate || txFilterCode !== "All" || txFilterCategory !== "All" || txFilterSource !== "All") && (
-                <button
-                  onClick={() => {
-                    setTxFilterDate("");
-                    setTxFilterCode("All");
-                    setTxFilterCategory("All");
-                    setTxFilterSource("All");
-                  }}
-                  className="text-xs font-medium text-muted-foreground underline hover:text-foreground"
-                >
-                  Clear filters
-                </button>
-              )}
-            </div>
-            <div>
-              <p className="mb-1 text-xs font-medium text-muted-foreground">Group</p>
-              <Segmented
-                options={["All", ...EXPENSE_CODES, "Income"]}
-                value={txFilterCode}
-                onChange={(v) => {
-                  setTxFilterCode(v);
-                  setTxFilterCategory("All");
-                }}
-                activeClassName="bg-finance text-white"
-              />
-            </div>
+          <div className="mt-4 flex flex-wrap items-center gap-2 rounded-2xl bg-muted p-3">
+            <Input
+              type="date"
+              className="h-9 w-40"
+              value={txFilterDate}
+              onChange={(e) => setTxFilterDate(e.target.value)}
+            />
+            <Select
+              value={txFilterCode}
+              onChange={(v) => {
+                setTxFilterCode(v);
+                setTxFilterCategory("All");
+              }}
+              options={["All", ...EXPENSE_CODES, "Income"]}
+              className="w-40"
+            />
             {txFilterCode !== "All" && (
-              <div>
-                <p className="mb-1 text-xs font-medium text-muted-foreground">Category</p>
-                <Segmented
-                  options={["All", ...subcategoriesFor(txFilterCode)]}
-                  value={txFilterCategory}
-                  onChange={setTxFilterCategory}
-                  activeClassName="bg-finance/80 text-white"
-                />
-              </div>
-            )}
-            <div>
-              <p className="mb-1 text-xs font-medium text-muted-foreground">Source</p>
-              <Segmented
-                options={["All", ...BANK_SOURCES]}
-                value={txFilterSource}
-                onChange={setTxFilterSource}
-                activeClassName="bg-finance text-white"
+              <Select
+                value={txFilterCategory}
+                onChange={setTxFilterCategory}
+                options={["All", ...subcategoriesFor(txFilterCode)]}
+                className="w-44"
               />
-            </div>
+            )}
+            <Select value={txFilterSource} onChange={setTxFilterSource} options={["All", ...BANK_SOURCES]} className="w-32" />
+            {(txFilterDate || txFilterCode !== "All" || txFilterCategory !== "All" || txFilterSource !== "All") && (
+              <button
+                onClick={() => {
+                  setTxFilterDate("");
+                  setTxFilterCode("All");
+                  setTxFilterCategory("All");
+                  setTxFilterSource("All");
+                }}
+                className="text-xs font-medium text-muted-foreground underline hover:text-foreground"
+              >
+                Clear filters
+              </button>
+            )}
           </div>
 
           <p className="mt-3 text-sm font-normal text-muted-foreground">{filteredTransactions.length} of {a.transactions.length} shown — scroll for more</p>

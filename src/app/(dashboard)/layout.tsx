@@ -14,11 +14,17 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <div className="flex min-h-screen">
-      <Sidebar />
+      <div className="print:hidden">
+        <Sidebar />
+      </div>
       <div className="flex min-h-screen flex-1 flex-col">
-        <TopBar email={user.email} />
-        <main className="flex-1 px-4 pb-24 pt-6 md:px-8 md:pb-10">{children}</main>
-        <BottomNav />
+        <div className="print:hidden">
+          <TopBar email={user.email} />
+        </div>
+        <main className="flex-1 px-4 pb-24 pt-6 md:px-8 md:pb-10 print:p-0">{children}</main>
+        <div className="print:hidden">
+          <BottomNav />
+        </div>
       </div>
     </div>
   );
