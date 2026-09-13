@@ -3,6 +3,7 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import { DailyLog } from "@/lib/types";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { MICROCOPY } from "@/lib/constants";
+import { fillDateGaps } from "@/lib/utils";
 
 function movingAverage(values: (number | null)[], window = 7) {
   return values.map((_, i) => {
@@ -16,12 +17,16 @@ export function WeightChart({ logs }: { logs: DailyLog[] }) {
   const withWeight = logs.filter((l) => l.weight != null);
   if (withWeight.length < 2) return <EmptyState message={MICROCOPY.emptyChart} />;
 
-  const weights = logs.map((l) => l.weight);
+  // Fill calendar gaps so skipped days show up as a visible break in the line
+  // instead of silently disappearing from the timeline.
+  const filled = fillDateGaps(logs, (date) => ({ date } as DailyLog));
+  const weights = filled.map((l) => (l.notLogged ? null : l.weight));
   const avg = movingAverage(weights);
-  const data = logs.map((l, i) => ({
+  const data = filled.map((l, i) => ({
     date: l.date.slice(5),
-    weight: l.weight,
+    weight: l.notLogged ? null : l.weight,
     avg: avg[i] ? Math.round((avg[i] as number) * 10) / 10 : null,
+    notLogged: !!l.notLogged,
   }));
 
   return (
@@ -36,9 +41,21 @@ export function WeightChart({ logs }: { logs: DailyLog[] }) {
         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
         <XAxis dataKey="date" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
         <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} domain={["dataMin - 1", "dataMax + 1"]} />
-        <Tooltip contentStyle={{ borderRadius: 16, border: "1px solid hsl(var(--border))" }} />
-        <Area type="monotone" dataKey="weight" stroke="#a7f3d0" fill="none" strokeWidth={1} dot={false} />
-        <Area type="monotone" dataKey="avg" stroke="#10b981" fill="url(#weightAvg)" strokeWidth={3} dot={false} name="7-day average" />
+        <Tooltip
+          contentStyle={{ borderRadius: 16, border: "1px solid hsl(var(--border))" }}
+          formatter={(value: number | null, name, item) => [item?.payload?.notLogged ? "Not logged" : value, name]}
+        />
+        <Area type="monotone" dataKey="weight" stroke="#a7f3d0" fill="none" strokeWidth={1} dot={false} connectNulls={false} />
+        <Area
+          type="monotone"
+          dataKey="avg"
+          stroke="#10b981"
+          fill="url(#weightAvg)"
+          strokeWidth={3}
+          dot={false}
+          name="7-day average"
+          connectNulls={false}
+        />
       </AreaChart>
     </ResponsiveContainer>
   );
