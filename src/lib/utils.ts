@@ -15,6 +15,29 @@ export function formatDateISO(d: Date) {
   return `${y}-${m}-${day}`;
 }
 
+/**
+ * Builds every calendar date (inclusive) between two logged entries' dates,
+ * so charts can show gaps for days that were never logged instead of
+ * silently skipping straight from one logged day to the next. Only fills the
+ * *dates* — it never invents values for those gap days.
+ */
+export function fillDateGaps<T extends { date: string }>(
+  logs: T[],
+  makeEmpty: (date: string) => T
+): (T & { notLogged?: boolean })[] {
+  if (logs.length === 0) return [];
+  const byDate = new Map(logs.map((l) => [l.date, l]));
+  const start = new Date(logs[0].date);
+  const end = new Date(logs[logs.length - 1].date);
+  const result: (T & { notLogged?: boolean })[] = [];
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const dateStr = formatDateISO(d);
+    const existing = byDate.get(dateStr);
+    result.push(existing ? existing : { ...makeEmpty(dateStr), notLogged: true });
+  }
+  return result;
+}
+
 export function average(nums: (number | null | undefined)[]): number | null {
   const valid = nums.filter((n): n is number => typeof n === "number" && !Number.isNaN(n));
   if (valid.length === 0) return null;
