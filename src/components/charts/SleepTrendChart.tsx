@@ -24,7 +24,10 @@ export function SleepTrendChart({ logs, min, max }: { logs: DailyLog[]; min: num
         <YAxis domain={[0, 10]} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
         <Tooltip
           contentStyle={{ borderRadius: 16, border: "1px solid hsl(var(--border))" }}
-          formatter={(value: number | null, name, item) => [item?.payload?.notLogged ? "Not logged" : value, name]}
+          formatter={(value: unknown, name: unknown, item: unknown) => {
+            const payload = (item as { payload?: { notLogged?: boolean } })?.payload;
+            return [payload?.notLogged ? "Not logged" : value, name] as [string | number, string];
+          }}
         />
         <ReferenceArea y1={min} y2={max} fill="#6366f1" fillOpacity={0.08} />
         {/* connectNulls intentionally left off (default false) so a skipped day
