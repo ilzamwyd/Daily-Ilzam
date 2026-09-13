@@ -18,8 +18,10 @@ export function MindTrendChart({ logs }: { logs: DailyLog[] }) {
     notLogged: !!l.notLogged,
   }));
 
-  const notLoggedFormatter = (value: number | null, name: string, item: { payload?: { notLogged?: boolean } }) =>
-    [item?.payload?.notLogged ? "Not logged" : value, name] as [string | number, string];
+  const notLoggedFormatter = (value: unknown, name: unknown, item: unknown) => {
+    const payload = (item as { payload?: { notLogged?: boolean } })?.payload;
+    return [payload?.notLogged ? "Not logged" : value, name] as [string | number, string];
+  };
 
   return (
     <ResponsiveContainer width="100%" height={260}>
