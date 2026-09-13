@@ -41,6 +41,13 @@ export default async function OverviewPage() {
 
   const balance = computeWeeklyBalanceScore(last7, targets, englishSessionCount ?? undefined);
 
+  // Days logged vs. not logged this calendar month — reported separately from
+  // the score itself, never folded into it as if a skipped day were a 0.
+  const monthStart = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-01`;
+  const daysElapsedThisMonth = new Date().getDate();
+  const loggedThisMonth = logs.filter((l) => l.date >= monthStart && l.date <= today).length;
+  const notLoggedThisMonth = Math.max(0, daysElapsedThisMonth - loggedThisMonth);
+
   const since14 = formatDateISO(daysAgo(13));
   const { data: foodRows } = await supabase
     .from("food_log")
@@ -254,6 +261,10 @@ export default async function OverviewPage() {
           </CardHeader>
           <CardContent>
             <WeeklyBalanceRing score={balance?.overall ?? null} />
+            <p className="mt-2 text-center text-xs text-muted-foreground">
+              {loggedThisMonth}/{daysElapsedThisMonth} days logged this month
+              {notLoggedThisMonth > 0 && ` · ${notLoggedThisMonth} not logged`}
+            </p>
           </CardContent>
         </Card>
 
