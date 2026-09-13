@@ -227,7 +227,7 @@ export default function CheckInPage() {
         </div>
         <div className="border-t border-border pt-4">
           <label className="mb-1.5 block text-sm font-medium">Career Energy vs Career Drain — today's rating</label>
-          <WeeklyRoleReviewInput />
+          <WeeklyRoleReviewInput date={date} />
         </div>
       </SectionCard>
 
