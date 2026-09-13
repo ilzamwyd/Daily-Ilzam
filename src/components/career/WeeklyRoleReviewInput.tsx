@@ -45,14 +45,17 @@ function RoleCard({
         ))}
         <Button size="sm" onClick={onSave} disabled={saving} variant="soft" className="gap-1.5">
           {saved && <Check className="h-3.5 w-3.5" />}
-          {saving ? "Saving…" : saved ? "Saved for today" : "Save today"}
+          {saving ? "Saving…" : saved ? "Saved" : "Save"}
         </Button>
       </div>
     </div>
   );
 }
 
-export function WeeklyRoleReviewInput() {
+// Accepts the date the parent Daily Check-In is currently viewing, so
+// navigating to a past day and filling this in actually saves against THAT
+// day — not silently against today, which was the earlier bug here.
+export function WeeklyRoleReviewInput({ date }: { date: string }) {
   const supabase = createClient();
   const [userId, setUserId] = useState<string | null>(null);
   const [mainReview, setMainReview] = useState<Partial<CareerReview>>({ role: "main" });
@@ -61,10 +64,13 @@ export function WeeklyRoleReviewInput() {
   const [savedRole, setSavedRole] = useState<"main" | "expanded" | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const today = formatDateISO(new Date());
+  const isToday = date === formatDateISO(new Date());
 
   useEffect(() => {
     (async () => {
+      setLoading(true);
+      setMainReview({ role: "main" });
+      setExpandedReview({ role: "expanded" });
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -74,7 +80,7 @@ export function WeeklyRoleReviewInput() {
         .from("career_reviews")
         .select("*")
         .eq("user_id", user.id)
-        .eq("date", today);
+        .eq("date", date);
       const rows = (data as CareerReview[]) ?? [];
       const main = rows.find((r) => r.role === "main");
       const expanded = rows.find((r) => r.role === "expanded");
@@ -83,7 +89,7 @@ export function WeeklyRoleReviewInput() {
       setLoading(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [date]);
 
   async function saveReview(role: "main" | "expanded") {
     if (!userId) return;
@@ -92,7 +98,7 @@ export function WeeklyRoleReviewInput() {
     const payload = role === "main" ? mainReview : expandedReview;
     const { data } = await supabase
       .from("career_reviews")
-      .upsert({ ...payload, role, date: today, week_start: formatDateISO(startOfWeek(new Date())), user_id: userId }, { onConflict: "user_id,date,role" })
+      .upsert({ ...payload, role, date, week_start: formatDateISO(startOfWeek(new Date(date))), user_id: userId }, { onConflict: "user_id,date,role" })
       .select()
       .single();
     if (data) {
@@ -108,7 +114,7 @@ export function WeeklyRoleReviewInput() {
   return (
     <div>
       <p className="mb-3 text-xs text-muted-foreground">
-        Today's snapshot ({today}) — one quick rating per role, per day. The Work page averages your days into a weekly recap automatically.
+        {isToday ? "Today's" : `${date}'s`} snapshot — one quick rating per role, per day. The Work page averages your days into a weekly recap automatically.
       </p>
       <div className="grid gap-3 sm:grid-cols-2">
         <RoleCard
