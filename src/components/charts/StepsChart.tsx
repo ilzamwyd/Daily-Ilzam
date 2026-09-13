@@ -26,7 +26,10 @@ export function StepsChart({ logs, target }: { logs: DailyLog[]; target: number 
         <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
         <Tooltip
           contentStyle={{ borderRadius: 16, border: "1px solid hsl(var(--border))" }}
-          formatter={(value: number | null, _name, item) => [item?.payload?.notLogged ? "Not logged" : value, "Steps"]}
+          formatter={(value: unknown, _name: unknown, item: unknown) => {
+            const payload = (item as { payload?: { notLogged?: boolean } })?.payload;
+            return [payload?.notLogged ? "Not logged" : value, "Steps"] as [string | number, string];
+          }}
         />
         <ReferenceLine y={target} stroke="#3b82f6" strokeDasharray="4 4" />
         <Bar dataKey="steps" radius={[6, 6, 0, 0]}>
